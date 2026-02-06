@@ -17,52 +17,24 @@ const LEVEL_QUESTIONS = {
         { question: "Mechanism", answer: "Mechanism" }
     ],
     2: [
-        { question: "Learning", answer: "Learning" },
-        { question: "Dataset", answer: "Dataset" },
-        { question: "Neural", answer: "Neural" },
-        { question: "Prediction", answer: "Prediction" },
-        { question: "Training", answer: "Training" },
-        { question: "Model", answer: "Model" },
-        { question: "Recognition", answer: "Recognition" },
-        { question: "Vision", answer: "Vision" },
-        { question: "Language", answer: "Language" },
-        { question: "Automation", answer: "Automation" }
+        { question: "Learning", answer: "Learning" }, { question: "Dataset", answer: "Dataset" }, { question: "Neural", answer: "Neural" },
+        { question: "Prediction", answer: "Prediction" }, { question: "Training", answer: "Training" }, { question: "Model", answer: "Model" },
+        { question: "Vision", answer: "Vision" }, { question: "Language", answer: "Language" }, { question: "Optimization", answer: "Optimization" }, { question: "Data", answer: "Data" }
     ],
     3: [
-        { question: "Algorithm", answer: "Algorithm" },
-        { question: "Computation", answer: "Computation" },
-        { question: "Optimization", answer: "Optimization" },
-        { question: "Simulation", answer: "Simulation" },
-        { question: "Analysis", answer: "Analysis" },
-        { question: "Calibration", answer: "Calibration" },
-        { question: "Iteration", answer: "Iteration" },
-        { question: "Processing", answer: "Processing" },
-        { question: "Execution", answer: "Execution" },
-        { question: "Control", answer: "Control" }
+        { question: "Algorithm", answer: "Algorithm" }, { question: "Computation", answer: "Computation" }, { question: "Simulation", answer: "Simulation" },
+        { question: "Analysis", answer: "Analysis" }, { question: "Calibration", answer: "Calibration" }, { question: "Iteration", answer: "Iteration" },
+        { question: "Processing", answer: "Processing" }, { question: "Execution", answer: "Execution" }, { question: "Control", answer: "Control" }, { question: "Code", answer: "Code" }
     ],
     4: [
-        { question: "Hydraulics", answer: "Hydraulics" },
-        { question: "Pneumatics", answer: "Pneumatics" },
-        { question: "Thermodynamics", answer: "Thermodynamics" },
-        { question: "Kinematics", answer: "Kinematics" },
-        { question: "Dynamics", answer: "Dynamics" },
-        { question: "Torque", answer: "Torque" },
-        { question: "Velocity", answer: "Velocity" },
-        { question: "Friction", answer: "Friction" },
-        { question: "Stress", answer: "Stress" },
-        { question: "Strain", answer: "Strain" }
+        { question: "Hydraulics", answer: "Hydraulics" }, { question: "Pneumatics", answer: "Pneumatics" }, { question: "Torque", answer: "Torque" },
+        { question: "Velocity", answer: "Velocity" }, { question: "Friction", answer: "Friction" }, { question: "Stress", answer: "Stress" },
+        { question: "Strain", answer: "Strain" }, { question: "Gravity", answer: "Gravity" }, { question: "Motion", answer: "Motion" }, { question: "Physics", answer: "Physics" }
     ],
     5: [
-        { question: "Robotics", answer: "Robotics" },
-        { question: "Mechatronics", answer: "Mechatronics" },
-        { question: "Autonomous", answer: "Autonomous" },
-        { question: "Cybernetics", answer: "Cybernetics" },
-        { question: "Nanotechnology", answer: "Nanotechnology" },
-        { question: "Biomimicry", answer: "Biomimicry" },
-        { question: "Augmentation", answer: "Augmentation" },
-        { question: "Digitization", answer: "Digitization" },
-        { question: "Innovation", answer: "Innovation" },
-        { question: "Intelligence", answer: "Intelligence" }
+        { question: "Robotics", answer: "Robotics" }, { question: "Mechatronics", answer: "Mechatronics" }, { question: "Autonomous", answer: "Autonomous" },
+        { question: "Cybernetics", answer: "Cybernetics" }, { question: "Nano", answer: "Nano" }, { question: "Innovation", answer: "Innovation" },
+        { question: "Intelligence", answer: "Intelligence" }, { question: "Future", answer: "Future" }, { question: "Design", answer: "Design" }, { question: "System", answer: "System" }
     ]
 };
 
@@ -82,18 +54,60 @@ export default function GamePage() {
         score: 0,
         timeRemaining: 1200,
         playerName: '',
-        isStarted: false,
+        isRegistered: false,
+        isStartedByHost: false,
         isCompleted: false,
         tiles: [],
         flipped: [],
         matched: [],
         canFlip: true,
-        violationCount: 0,
         startTime: null
     });
 
-    const timerRef = useRef(null);
     const wsRef = useRef(null);
+    const timerRef = useRef(null);
+
+    // Initial check for game status
+    useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/game-status');
+                const data = await res.json();
+                if (data.gameStarted) setGameState(prev => ({ ...prev, isStartedByHost: true }));
+            } catch (e) { console.error('Status check failed'); }
+        };
+        checkStatus();
+
+        // WebSocket for real-time start trigger
+        const ws = new WebSocket('ws://localhost:5000');
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'game-started' || (message.type === 'initial' && message.gameStarted)) {
+                setGameState(prev => ({ ...prev, isStartedByHost: true }));
+            }
+            if (message.type === 'reset') {
+                window.location.reload();
+            }
+        };
+        wsRef.current = ws;
+
+        return () => ws.close();
+    }, []);
+
+    // Visibility detection
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (gameState.isRegistered && gameState.isStartedByHost && document.hidden) {
+                fetch('http://localhost:5000/api/report-violation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerName: gameState.playerName, violationType: 'tab-switch' })
+                });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [gameState.isRegistered, gameState.isStartedByHost, gameState.playerName]);
 
     const generateTiles = useCallback((level) => {
         const pairs = LEVEL_QUESTIONS[level];
@@ -105,84 +119,67 @@ export default function GamePage() {
         return shuffleArray(tiles);
     }, []);
 
-    const startGame = async (name) => {
+    const register = async (name) => {
         if (!name.trim()) return;
-
         try {
-            await fetch('http://localhost:5000/api/register-participant', {
+            const res = await fetch('http://localhost:5000/api/register-participant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: name })
             });
-        } catch (e) { console.error('Reg error:', e); }
-
-        setGameState(prev => ({
-            ...prev,
-            playerName: name,
-            isStarted: true,
-            startTime: Date.now(),
-            tiles: generateTiles(1)
-        }));
+            const data = await res.json();
+            setGameState(prev => ({
+                ...prev,
+                playerName: name,
+                isRegistered: true,
+                isStartedByHost: data.gameStarted,
+                tiles: generateTiles(1),
+                startTime: Date.now()
+            }));
+        } catch (e) { alert('Server unavailable'); }
     };
 
     const handleTileClick = (tile) => {
-        if (!gameState.canFlip || gameState.flipped.find(f => f.id === tile.id) || gameState.matched.includes(tile.pairId)) return;
+        if (!gameState.canFlip || !gameState.isStartedByHost || gameState.flipped.find(f => f.id === tile.id) || gameState.matched.includes(tile.pairId)) return;
 
         const newFlipped = [...gameState.flipped, tile];
         setGameState(prev => ({ ...prev, flipped: newFlipped }));
 
         if (newFlipped.length === 2) {
             setGameState(prev => ({ ...prev, canFlip: false }));
-            setTimeout(() => checkMatch(newFlipped), 800);
-        }
-    };
-
-    const checkMatch = (flipped) => {
-        const [t1, t2] = flipped;
-        const isMatch = t1.pairId === t2.pairId && t1.type !== t2.type;
-
-        if (isMatch) {
-            const newMatched = [...gameState.matched, t1.pairId];
-            const newScore = gameState.score + 10;
-
-            setGameState(prev => ({
-                ...prev,
-                matched: newMatched,
-                score: newScore,
-                flipped: [],
-                canFlip: true
-            }));
-
-            if (newMatched.length === 10) {
-                if (gameState.level < 5) {
-                    setTimeout(() => {
-                        setGameState(prev => ({
-                            ...prev,
-                            level: prev.level + 1,
-                            matched: [],
-                            tiles: generateTiles(prev.level + 1)
-                        }));
-                    }, 1000);
+            setTimeout(() => {
+                const [t1, t2] = newFlipped;
+                if (t1.pairId === t2.pairId && t1.type !== t2.type) {
+                    const newMatched = [...gameState.matched, t1.pairId];
+                    const newScore = gameState.score + 10;
+                    if (newMatched.length === 10) {
+                        if (gameState.level === 5) {
+                            completeGame(newScore);
+                        } else {
+                            setTimeout(() => {
+                                setGameState(prev => ({
+                                    ...prev,
+                                    level: prev.level + 1,
+                                    score: newScore,
+                                    matched: [],
+                                    tiles: generateTiles(prev.level + 1),
+                                    canFlip: true,
+                                    flipped: []
+                                }));
+                            }, 500);
+                        }
+                    } else {
+                        setGameState(prev => ({ ...prev, matched: newMatched, score: newScore, flipped: [], canFlip: true }));
+                    }
                 } else {
-                    completeGame(newScore);
+                    setGameState(prev => ({ ...prev, flipped: [], canFlip: true }));
                 }
-            }
-        } else {
-            setGameState(prev => ({ ...prev, flipped: [], canFlip: true }));
+            }, 600);
         }
     };
 
-    const completeGame = async (finalScore) => {
+    const completeGame = async (finalBaseScore) => {
         const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
-
-        // Mark allocation logic
-        const minutesTaken = timeTaken / 60;
-        const timeBonus = Math.max(0, 500 - (minutesTaken * 25));
-        const totalScore = Math.min(1000, Math.max(0, finalScore + Math.round(timeBonus)));
-
-        localStorage.setItem('gameCompleted', 'true');
-        localStorage.setItem('lastGameScore', totalScore);
-        localStorage.setItem('lastGameTime', `${Math.floor(timeTaken / 60)}:${(timeTaken % 60).toString().padStart(2, '0')}`);
 
         try {
             await fetch('http://localhost:5000/api/submit-score', {
@@ -190,202 +187,118 @@ export default function GamePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     playerName: gameState.playerName,
-                    score: finalScore, // Base score
-                    level: 5,
-                    timeTaken: timeTaken
+                    score: finalBaseScore,
+                    timeTaken,
+                    level: 5
                 })
             });
-        } catch (e) { console.error('Submit error:', e); }
+        } catch (e) { console.error('Submit failed'); }
 
-        setGameState(prev => ({ ...prev, isCompleted: true }));
-        setTimeout(() => router.push('/'), 3000);
+        // Local storage for landing page results
+        const minutes = timeTaken / 60;
+        const timeBonus = Math.max(0, 500 - (minutes * 25));
+        const total = Math.min(1000, Math.max(0, finalBaseScore + Math.round(timeBonus)));
+
+        localStorage.setItem('gameCompleted', 'true');
+        localStorage.setItem('lastGameScore', total);
+        localStorage.setItem('lastGameTime', `${Math.floor(timeTaken / 60)}m ${timeTaken % 60}s`);
+
+        setGameState(prev => ({ ...prev, isCompleted: true, score: finalBaseScore }));
+        setTimeout(() => router.push('/'), 4000);
     };
 
     useEffect(() => {
-        if (gameState.isStarted && !gameState.isCompleted) {
+        if (gameState.isRegistered && gameState.isStartedByHost && !gameState.isCompleted) {
             timerRef.current = setInterval(() => {
-                setGameState(prev => {
-                    if (prev.timeRemaining <= 1) {
-                        clearInterval(timerRef.current);
-                        return { ...prev, timeRemaining: 0 };
-                    }
-                    return { ...prev, timeRemaining: prev.timeRemaining - 1 };
-                });
+                setGameState(prev => ({ ...prev, timeRemaining: prev.timeRemaining > 0 ? prev.timeRemaining - 1 : 0 }));
             }, 1000);
         }
         return () => clearInterval(timerRef.current);
-    }, [gameState.isStarted, gameState.isCompleted]);
+    }, [gameState.isRegistered, gameState.isStartedByHost, gameState.isCompleted]);
+
+    if (!gameState.isRegistered) {
+        return (
+            <div className="setup-container">
+                <div className="card">
+                    <h1>WELCOME TO GAME FLOW</h1>
+                    <p>Enter your name to register for the session</p>
+                    <input type="text" id="name-in" placeholder="Full Name" onKeyDown={e => e.key === 'Enter' && register(e.target.value)} autoFocus />
+                    <button onClick={() => register(document.getElementById('name-in').value)}>JOIN SESSION</button>
+                </div>
+                <style jsx>{`
+                    .setup-container { height: 100vh; background: #020b18; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Outfit', sans-serif; }
+                    .card { background: rgba(255, 255, 255, 0.05); padding: 3rem; border-radius: 20px; border: 1px solid rgba(0, 255, 255, 0.2); text-align: center; box-shadow: 0 0 40px rgba(0, 255, 255, 0.1); }
+                    h1 { font-size: 2rem; margin-bottom: 1rem; color: #00ffff; }
+                    input { display: block; width: 100%; padding: 1rem; margin: 1.5rem 0; background: rgba(255, 255, 255, 0.1); border: 1px solid cyan; border-radius: 10px; color: #fff; outline: none; }
+                    button { width: 100%; padding: 1rem; background: cyan; color: #000; font-weight: 900; border: none; border-radius: 10px; cursor: pointer; }
+                `}</style>
+            </div>
+        );
+    }
+
+    if (!gameState.isStartedByHost) {
+        return (
+            <div className="waiting-container">
+                <div className="loader"></div>
+                <h2>WAITING FOR HOST TO START...</h2>
+                <p>Registered as: <strong>{gameState.playerName}</strong></p>
+                <style jsx>{`
+                    .waiting-container { height: 100vh; background: #020b18; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-family: 'Outfit', sans-serif; }
+                    .loader { width: 60px; height: 60px; border: 4px solid rgba(0, 255, 255, 0.1); border-top: 4px solid #00ffff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 2rem; }
+                    @keyframes spin { 100% { transform: rotate(360deg); } }
+                    h2 { letter-spacing: 2px; color: #00ffff; }
+                `}</style>
+            </div>
+        );
+    }
 
     return (
         <div className="game-wrapper">
-            <div className="background-animation"></div>
-
-            {!gameState.isStarted ? (
-                <div className="modal active">
-                    <div className="modal-content">
-                        <h2>Welcome!</h2>
-                        <input
-                            type="text"
-                            id="player-name-input"
-                            placeholder="Enter Your Name"
-                            onKeyDown={(e) => e.key === 'Enter' && startGame(e.target.value)}
-                        />
-                        <button className="start-btn" onClick={() => startGame(document.getElementById('player-name-input').value)}>
-                            Start Game
-                        </button>
-                    </div>
-                </div>
-            ) : gameState.isCompleted ? (
-                <div className="modal active">
-                    <div className="modal-content">
-                        <h1>🏆 Congratulations!</h1>
-                        <p>You completed all levels!</p>
-                        <p>Redirecting to landing page...</p>
-                    </div>
-                </div>
-            ) : (
-                <div className="game-container">
-                    <header className="game-header">
-                        <div className="info-panel">
-                            <div className="info-card">Level: {gameState.level}</div>
-                            <div className="info-card">Score: {gameState.score}</div>
-                            <div className="info-card">
-                                Time: {Math.floor(gameState.timeRemaining / 60)}:{(gameState.timeRemaining % 60).toString().padStart(2, '0')}
-                            </div>
-                        </div>
-                    </header>
-
-                    <div className="game-grid">
-                        {gameState.tiles.map(tile => {
-                            const isFlipped = gameState.flipped.find(f => f.id === tile.id);
-                            const isMatched = gameState.matched.includes(tile.pairId);
-                            return (
-                                <div
-                                    key={tile.id}
-                                    className={`tile ${isFlipped ? 'flipped' : ''} ${isMatched ? 'matched' : ''}`}
-                                    onClick={() => handleTileClick(tile)}
-                                >
-                                    <div className="tile-inner">
-                                        <div className="tile-front"></div>
-                                        <div className="tile-back">{tile.text}</div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+            {gameState.isCompleted && (
+                <div className="completion-overlay">
+                    <h1>🏁 MISSION COMPLETE!</h1>
+                    <p>Sending score to leaderboard...</p>
                 </div>
             )}
 
+            <header className="game-status">
+                <div className="stat">LEVEL <span>{gameState.level} / 5</span></div>
+                <div className="stat">SCORE <span>{gameState.score}</span></div>
+                <div className="stat time">TIME <span>{Math.floor(gameState.timeRemaining / 60)}:{(gameState.timeRemaining % 60).toString().padStart(2, '0')}</span></div>
+            </header>
+
+            <div className="grid">
+                {gameState.tiles.map(tile => {
+                    const flipped = gameState.flipped.find(f => f.id === tile.id) || gameState.matched.includes(tile.pairId);
+                    const matched = gameState.matched.includes(tile.pairId);
+                    return (
+                        <div key={tile.id} className={`tile ${flipped ? 'flipped' : ''} ${matched ? 'matched' : ''}`} onClick={() => handleTileClick(tile)}>
+                            <div className="inner">
+                                <div className="front">?</div>
+                                <div className="back">{tile.text}</div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
             <style jsx>{`
-                .game-wrapper {
-                    min-height: 100vh;
-                    background: #020b18;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    color: #fff;
-                    position: relative;
-                }
-                .background-animation {
-                    position: fixed;
-                    inset: 0;
-                    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.05), transparent 70%);
-                    z-index: 0;
-                }
-                .modal {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(0, 0, 0, 0.8);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 100;
-                }
-                .modal-content {
-                    background: rgba(255, 255, 255, 0.05);
-                    padding: 3rem;
-                    border-radius: 20px;
-                    border: 1px solid cyan;
-                    text-align: center;
-                    box-shadow: 0 0 30px cyan;
-                }
-                input {
-                    display: block;
-                    width: 100%;
-                    padding: 1rem;
-                    margin: 1rem 0;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid cyan;
-                    color: #fff;
-                    border-radius: 10px;
-                }
-                .start-btn {
-                    padding: 0.8rem 2rem;
-                    background: cyan;
-                    color: #000;
-                    border: none;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    cursor: pointer;
-                }
-                .game-grid {
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    gap: 1rem;
-                    margin-top: 2rem;
-                }
-                .tile {
-                    width: 120px;
-                    height: 120px;
-                    perspective: 1000px;
-                    cursor: pointer;
-                }
-                .tile-inner {
-                    position: relative;
-                    width: 100%;
-                    height: 100%;
-                    transition: transform 0.6s;
-                    transform-style: preserve-3d;
-                }
-                .tile.flipped .tile-inner {
-                    transform: rotateY(180deg);
-                }
-                .tile.matched {
-                   visibility: hidden;
-                   opacity: 0;
-                   transition: opacity 0.5s;
-                }
-                .tile-front, .tile-back {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    backface-visibility: hidden;
-                    border-radius: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: 700;
-                    border: 1px solid cyan;
-                }
-                .tile-front {
-                    background: rgba(255, 255, 255, 0.05);
-                }
-                .tile-back {
-                    background: cyan;
-                    color: #000;
-                    transform: rotateY(180deg);
-                }
-                .info-panel {
-                    display: flex;
-                    gap: 2rem;
-                    margin-bottom: 2rem;
-                }
-                .info-card {
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 1rem;
-                    border-radius: 10px;
-                    border: 1px solid cyan;
-                }
+                .game-wrapper { min-height: 100vh; background: #020b18; padding: 2rem; color: #fff; font-family: 'Outfit', sans-serif; }
+                .game-status { display: flex; justify-content: center; gap: 4rem; background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 3rem; }
+                .stat { font-size: 0.9rem; color: #888; }
+                .stat span { display: block; font-size: 1.5rem; font-weight: 900; color: #fff; }
+                .time span { color: #00ffff; }
+                .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; max-width: 800px; margin: 0 auto; }
+                .tile { height: 110px; perspective: 1000px; cursor: pointer; transition: 0.3s; }
+                .tile:hover { transform: scale(1.03); }
+                .inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+                .tile.flipped .inner { transform: rotateY(180deg); }
+                .tile.matched { opacity: 0; pointer-events: none; transition: 0.8s; }
+                .front, .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,255,255,0.2); font-weight: bold; }
+                .front { background: rgba(255,255,255,0.05); font-size: 2rem; color: rgba(0,255,255,0.3); }
+                .back { background: #00ffff; color: #000; transform: rotateY(180deg); padding: 0.5rem; text-align: center; font-size: 0.9rem; }
+                .completion-overlay { position: fixed; inset: 0; background: #020b18; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+                .completion-overlay h1 { font-size: 3rem; text-shadow: 0 0 20px #00ffff; margin-bottom: 1rem; }
             `}</style>
         </div>
     );
