@@ -48,7 +48,7 @@ echo ============================================
 echo.
 
 REM Use npx to bypass PowerShell restrictions
-start "GAME FLOW - FRONTEND" cmd /k "cd /d "%~dp0" && echo Frontend Running... && npx next dev"
+start "GAME FLOW - FRONTEND" cmd /k "cd /d "%~dp0" && echo Frontend Running... && npx next dev -H 0.0.0.0"
 
 echo.
 echo Both servers are starting in separate windows...

@@ -83,7 +83,8 @@ export default function GamePage() {
             if (!isComponentMounted) return;
 
             try {
-                ws = new WebSocket('ws://127.0.0.1:5000');
+                const hostname = window.location.hostname;
+                ws = new WebSocket(`ws://${hostname}:5000`);
 
                 ws.onopen = () => {
                     console.log('✅ Connected to server');
@@ -122,7 +123,8 @@ export default function GamePage() {
         // Initial status check
         const checkStatus = async () => {
             try {
-                const res = await fetch('http://127.0.0.1:5000/api/game-status');
+                const hostname = window.location.hostname;
+                const res = await fetch(`http://${hostname}:5000/api/game-status`);
                 const data = await res.json();
                 if (data.gameStarted) setGameState(prev => ({ ...prev, isStartedByHost: true }));
             } catch (e) {
@@ -145,7 +147,8 @@ export default function GamePage() {
         const handleVisibility = () => {
             const currentState = gameStateRef.current;
             if (currentState.isRegistered && currentState.isStartedByHost && document.hidden) {
-                fetch('http://127.0.0.1:5000/api/report-violation', {
+                const hostname = window.location.hostname;
+                fetch(`http://${hostname}:5000/api/report-violation`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ playerName: currentState.playerName, violationType: 'tab-switch' })
@@ -169,7 +172,8 @@ export default function GamePage() {
     const register = async (name) => {
         if (!name.trim()) return;
         try {
-            const res = await fetch('http://127.0.0.1:5000/api/register-participant', {
+            const hostname = window.location.hostname;
+            const res = await fetch(`http://${hostname}:5000/api/register-participant`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: name })
@@ -229,7 +233,8 @@ export default function GamePage() {
         const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
 
         try {
-            await fetch('http://127.0.0.1:5000/api/submit-score', {
+            const hostname = window.location.hostname;
+            await fetch(`http://${hostname}:5000/api/submit-score`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
