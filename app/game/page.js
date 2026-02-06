@@ -73,31 +73,71 @@ export default function GamePage() {
         gameStateRef.current = gameState;
     }, [gameState]);
 
-    // Initial check for game status
+    // Initial check for game status with WebSocket connection
     useEffect(() => {
+        let ws = null;
+        let reconnectTimeout = null;
+        let isComponentMounted = true;
+
+        const connectWebSocket = () => {
+            if (!isComponentMounted) return;
+
+            try {
+                ws = new WebSocket('ws://127.0.0.1:5000');
+
+                ws.onopen = () => {
+                    console.log('✅ Connected to server');
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'game-started' || (message.type === 'initial' && message.gameStarted)) {
+                        setGameState(prev => ({ ...prev, isStartedByHost: true }));
+                    }
+                    if (message.type === 'reset') {
+                        window.location.reload();
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('❌ WebSocket error:', error);
+                };
+
+                ws.onclose = () => {
+                    console.log('🔌 Disconnected from server. Reconnecting...');
+                    if (isComponentMounted) {
+                        reconnectTimeout = setTimeout(connectWebSocket, 2000);
+                    }
+                };
+
+                wsRef.current = ws;
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                if (isComponentMounted) {
+                    reconnectTimeout = setTimeout(connectWebSocket, 2000);
+                }
+            }
+        };
+
+        // Initial status check
         const checkStatus = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/game-status');
+                const res = await fetch('http://127.0.0.1:5000/api/game-status');
                 const data = await res.json();
                 if (data.gameStarted) setGameState(prev => ({ ...prev, isStartedByHost: true }));
-            } catch (e) { console.error('Status check failed'); }
+            } catch (e) {
+                console.error('⚠️ Server not reachable. Make sure server is running on port 5000');
+            }
         };
+
         checkStatus();
+        connectWebSocket();
 
-        // WebSocket for real-time start trigger
-        const ws = new WebSocket('ws://localhost:5000');
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'game-started' || (message.type === 'initial' && message.gameStarted)) {
-                setGameState(prev => ({ ...prev, isStartedByHost: true }));
-            }
-            if (message.type === 'reset') {
-                window.location.reload();
-            }
+        return () => {
+            isComponentMounted = false;
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            if (ws) ws.close();
         };
-        wsRef.current = ws;
-
-        return () => ws.close();
     }, []);
 
     // Visibility detection - using ref to avoid recreating listener
@@ -105,7 +145,7 @@ export default function GamePage() {
         const handleVisibility = () => {
             const currentState = gameStateRef.current;
             if (currentState.isRegistered && currentState.isStartedByHost && document.hidden) {
-                fetch('http://localhost:5000/api/report-violation', {
+                fetch('http://127.0.0.1:5000/api/report-violation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ playerName: currentState.playerName, violationType: 'tab-switch' })
@@ -129,7 +169,7 @@ export default function GamePage() {
     const register = async (name) => {
         if (!name.trim()) return;
         try {
-            const res = await fetch('http://localhost:5000/api/register-participant', {
+            const res = await fetch('http://127.0.0.1:5000/api/register-participant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: name })
@@ -189,7 +229,7 @@ export default function GamePage() {
         const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
 
         try {
-            await fetch('http://localhost:5000/api/submit-score', {
+            await fetch('http://127.0.0.1:5000/api/submit-score', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

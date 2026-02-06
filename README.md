@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 GAME FLOW - QUICK START GUIDE
 
-## Getting Started
+## Prerequisites
+- **Node.js** installed (v16 or higher)
+- **npm** package manager
 
-First, run the development server:
+## 🎯 Quick Launch (Easiest Method)
 
+### Option 1: Double-click `launch.bat`
+Simply double-click the `launch.bat` file in the project folder. It will:
+1. ✅ Check Node.js installation
+2. ✅ Install dependencies automatically
+3. ✅ Start backend server (port 5000)
+4. ✅ Start frontend server (port 3000)
+
+### Option 2: Manual Launch
 ```bash
+# Terminal 1 - Backend Server
+node server.js
+
+# Terminal 2 - Frontend Server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🌐 Access Points
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Once both servers are running:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role | URL | Description |
+|------|-----|-------------|
+| **Participant** | http://localhost:3000/game | Join as a player |
+| **Host** | http://localhost:3000/leaderboard | Admin dashboard |
+| **Landing** | http://localhost:3000 | Home page |
 
-## Learn More
+## 📋 How to Use
 
-To learn more about Next.js, take a look at the following resources:
+### For Hosts:
+1. Open http://localhost:3000/leaderboard
+2. Wait for participants to register
+3. Click **"START GLOBAL GAME"** when ready
+4. Monitor live leaderboard and violations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### For Participants:
+1. Open http://localhost:3000/game
+2. Enter your name and click **"JOIN SESSION"**
+3. Wait for host to start the game
+4. Play through 5 levels of tile matching
+5. ⚠️ **Don't switch tabs!** Violations are tracked
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 Troubleshooting
 
-## Deploy on Vercel
+### "Cannot connect to server"
+- Make sure backend is running: `node server.js`
+- Check if port 5000 is available
+- Look for console message: `Server running on port 5000`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### "Frontend not loading"
+- Make sure frontend is running: `npm run dev`
+- Check if port 3000 is available
+- Visit http://localhost:3000
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### "WebSocket connection failed"
+- The app now has **automatic reconnection**
+- Check browser console for connection status
+- Look for: ✅ Connected to server
+
+### Dependencies not installed
+```bash
+npm install
+```
+
+## 🎮 Game Features
+
+✅ **5 Levels** - Progressive difficulty  
+✅ **Real-time Leaderboard** - Live score updates  
+✅ **Tab Detection** - Automatic violation tracking  
+✅ **Time-based Scoring** - Faster = Higher score  
+✅ **Host Controls** - Start/Reset game globally  
+✅ **Auto-reconnect** - Resilient WebSocket connections  
+
+## 🛠️ Technical Details
+
+- **Backend**: Express + WebSocket (port 5000)
+- **Frontend**: Next.js 16 (port 3000)
+- **Real-time**: WebSocket with auto-reconnect
+- **Scoring**: Base score + Time bonus (max 1000)
+
+## 📝 Connection Status
+
+The application now includes:
+- ✅ Automatic reconnection every 2 seconds
+- ✅ Connection status indicators
+- ✅ Console logging for debugging
+- ✅ Error handling for network failures
+
+Check browser console for connection messages:
+- `✅ Connected to server` - Working properly
+- `🔌 Disconnected from server. Reconnecting...` - Auto-reconnecting
+- `❌ WebSocket error` - Check server status

@@ -21,38 +21,77 @@ export default function Leaderboard() {
     };
 
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:5000');
+        let ws = null;
+        let reconnectTimeout = null;
+        let isComponentMounted = true;
 
-        ws.onopen = () => setData(prev => ({ ...prev, connected: true }));
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'initial' || message.type === 'update') {
-                // Check for new violations to notify
-                if (message.type === 'update' && message.violations?.length > data.violations.length) {
-                    const newViolation = message.violations[message.violations.length - 1];
-                    addNotification(`🚨 ${newViolation.playerName} switched tabs!`);
+        const connectWebSocket = () => {
+            if (!isComponentMounted) return;
+
+            try {
+                ws = new WebSocket('ws://127.0.0.1:5000');
+
+                ws.onopen = () => {
+                    console.log('✅ Leaderboard connected to server');
+                    setData(prev => ({ ...prev, connected: true }));
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'initial' || message.type === 'update') {
+                        // Check for new violations to notify
+                        if (message.type === 'update' && message.violations?.length > data.violations.length) {
+                            const newViolation = message.violations[message.violations.length - 1];
+                            addNotification(`🚨 ${newViolation.playerName} switched tabs!`);
+                        }
+
+                        setData(prev => ({
+                            ...prev,
+                            leaderboard: message.data || [],
+                            participants: message.participants || [],
+                            violations: message.violations || [],
+                            gameStarted: message.gameStarted ?? prev.gameStarted
+                        }));
+                    } else if (message.type === 'game-started') {
+                        setData(prev => ({ ...prev, gameStarted: true }));
+                    } else if (message.type === 'reset') {
+                        setData(prev => ({ ...prev, gameStarted: false, leaderboard: [], participants: [], violations: [] }));
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('❌ WebSocket error:', error);
+                    setData(prev => ({ ...prev, connected: false }));
+                };
+
+                ws.onclose = () => {
+                    console.log('🔌 Disconnected from server. Reconnecting...');
+                    setData(prev => ({ ...prev, connected: false }));
+                    if (isComponentMounted) {
+                        reconnectTimeout = setTimeout(connectWebSocket, 2000);
+                    }
+                };
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                setData(prev => ({ ...prev, connected: false }));
+                if (isComponentMounted) {
+                    reconnectTimeout = setTimeout(connectWebSocket, 2000);
                 }
-
-                setData(prev => ({
-                    ...prev,
-                    leaderboard: message.data || [],
-                    participants: message.participants || [],
-                    violations: message.violations || [],
-                    gameStarted: message.gameStarted ?? prev.gameStarted
-                }));
-            } else if (message.type === 'game-started') {
-                setData(prev => ({ ...prev, gameStarted: true }));
-            } else if (message.type === 'reset') {
-                setData(prev => ({ ...prev, gameStarted: false, leaderboard: [], participants: [], violations: [] }));
             }
         };
 
-        return () => ws.close();
+        connectWebSocket();
+
+        return () => {
+            isComponentMounted = false;
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            if (ws) ws.close();
+        };
     }, []);
 
     const startGame = async () => {
         try {
-            await fetch('http://localhost:5000/api/start-game', { method: 'POST' });
+            await fetch('http://127.0.0.1:5000/api/start-game', { method: 'POST' });
         } catch (e) {
             alert('Error starting game');
         }
@@ -60,7 +99,7 @@ export default function Leaderboard() {
 
     const resetGame = async () => {
         if (confirm('Are you sure you want to reset all game data?')) {
-            await fetch('http://localhost:5000/api/reset-game', { method: 'POST' });
+            await fetch('http://127.0.0.1:5000/api/reset-game', { method: 'POST' });
         }
     };
 

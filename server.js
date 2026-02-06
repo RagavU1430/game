@@ -17,7 +17,9 @@ let gameStarted = false;
 
 const clients = new Set();
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+    const ip = req.socket.remoteAddress;
+    console.log(`📡 New WebSocket connection from ${ip}`);
     clients.add(ws);
 
     // Send initial state
@@ -29,7 +31,14 @@ wss.on('connection', (ws) => {
         gameStarted: gameStarted
     }));
 
-    ws.on('close', () => clients.delete(ws));
+    ws.on('error', (error) => {
+        console.error(`❌ WebSocket error for ${ip}:`, error);
+    });
+
+    ws.on('close', () => {
+        console.log(`🔌 WebSocket connection closed for ${ip}`);
+        clients.delete(ws);
+    });
 });
 
 function broadcast(message) {
