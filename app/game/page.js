@@ -66,6 +66,12 @@ export default function GamePage() {
 
     const wsRef = useRef(null);
     const timerRef = useRef(null);
+    const gameStateRef = useRef(gameState);
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        gameStateRef.current = gameState;
+    }, [gameState]);
 
     // Initial check for game status
     useEffect(() => {
@@ -94,20 +100,21 @@ export default function GamePage() {
         return () => ws.close();
     }, []);
 
-    // Visibility detection
+    // Visibility detection - using ref to avoid recreating listener
     useEffect(() => {
         const handleVisibility = () => {
-            if (gameState.isRegistered && gameState.isStartedByHost && document.hidden) {
+            const currentState = gameStateRef.current;
+            if (currentState.isRegistered && currentState.isStartedByHost && document.hidden) {
                 fetch('http://localhost:5000/api/report-violation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName: gameState.playerName, violationType: 'tab-switch' })
-                });
+                    body: JSON.stringify({ playerName: currentState.playerName, violationType: 'tab-switch' })
+                }).catch(err => console.error('Failed to report violation:', err));
             }
         };
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
-    }, [gameState.isRegistered, gameState.isStartedByHost, gameState.playerName]);
+    }, []); // Empty dependency array - listener only created once
 
     const generateTiles = useCallback((level) => {
         const pairs = LEVEL_QUESTIONS[level];
