@@ -30,8 +30,8 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-echo [3/4] Starting Backend Server on port 5000...
-start "GAME FLOW - BACKEND SERVER" cmd /k "cd /d "%~dp0" && echo Backend Server Running... && node server.js"
+echo [3/4] Starting Backend Server on port 8080...
+start "GAME FLOW - BACKEND SERVER" cmd /k "cd /d "%~dp0" && echo Backend Server Running on 8080... && node server.js"
 timeout /t 3 /nobreak >nul
 echo Backend server started!
 echo.
@@ -40,15 +40,15 @@ echo [4/4] Starting Frontend on port 3000...
 echo.
 echo ============================================
 echo   APPLICATION READY!
-echo   - Backend:  http://localhost:5000
-echo   - Frontend: http://localhost:3000
-echo   - Game:     http://localhost:3000/game
-echo   - Host:     http://localhost:3000/leaderboard
+echo   - Backend:  http://localhost:8080
+echo   - Frontend: http://localhost:8081
+echo   - Game:     http://localhost:8081/start-experience
+echo   - Host:     http://localhost:8081/leaderboard
 echo ============================================
 echo.
 
 REM Use npx to bypass PowerShell restrictions
-start "GAME FLOW - FRONTEND" cmd /k "cd /d "%~dp0" && echo Frontend Running... && npx next dev -H 0.0.0.0"
+start "GAME FLOW - FRONTEND" cmd /k "cd /d "%~dp0" && echo Frontend Running on 8081... && npx next dev -H 0.0.0.0 -p 8081"
 
 echo.
 echo Both servers are starting in separate windows...

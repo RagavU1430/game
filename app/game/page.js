@@ -84,7 +84,7 @@ export default function GamePage() {
 
             try {
                 const hostname = window.location.hostname;
-                ws = new WebSocket(`ws://${hostname}:5000`);
+                ws = new WebSocket(`ws://${hostname}:8080`);
 
                 ws.onopen = () => {
                     console.log('✅ Connected to server');
@@ -101,7 +101,10 @@ export default function GamePage() {
                 };
 
                 ws.onerror = (error) => {
-                    console.error('❌ WebSocket error:', error);
+                    // Only log if we had a successful connection before
+                    if (ws.readyState === WebSocket.OPEN) {
+                        console.error('❌ WebSocket error:', error);
+                    }
                 };
 
                 ws.onclose = () => {
@@ -113,7 +116,7 @@ export default function GamePage() {
 
                 wsRef.current = ws;
             } catch (error) {
-                console.error('Failed to connect:', error);
+                console.log('⚠️ Retrying connection...');
                 if (isComponentMounted) {
                     reconnectTimeout = setTimeout(connectWebSocket, 2000);
                 }
@@ -124,11 +127,11 @@ export default function GamePage() {
         const checkStatus = async () => {
             try {
                 const hostname = window.location.hostname;
-                const res = await fetch(`http://${hostname}:5000/api/game-status`);
+                const res = await fetch(`http://${hostname}:8080/api/game-status`);
                 const data = await res.json();
                 if (data.gameStarted) setGameState(prev => ({ ...prev, isStartedByHost: true }));
             } catch (e) {
-                console.error('⚠️ Server not reachable. Make sure server is running on port 5000');
+                console.error('⚠️ Server not reachable. Make sure server is running on port 8080');
             }
         };
 
@@ -148,7 +151,7 @@ export default function GamePage() {
             const currentState = gameStateRef.current;
             if (currentState.isRegistered && currentState.isStartedByHost && document.hidden) {
                 const hostname = window.location.hostname;
-                fetch(`http://${hostname}:5000/api/report-violation`, {
+                fetch(`http://${hostname}:8080/api/report-violation`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ playerName: currentState.playerName, violationType: 'tab-switch' })
@@ -173,7 +176,7 @@ export default function GamePage() {
         if (!name.trim()) return;
         try {
             const hostname = window.location.hostname;
-            const res = await fetch(`http://${hostname}:5000/api/register-participant`, {
+            const res = await fetch(`http://${hostname}:8080/api/register-participant`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: name })
@@ -234,7 +237,7 @@ export default function GamePage() {
 
         try {
             const hostname = window.location.hostname;
-            await fetch(`http://${hostname}:5000/api/submit-score`, {
+            await fetch(`http://${hostname}:8080/api/submit-score`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

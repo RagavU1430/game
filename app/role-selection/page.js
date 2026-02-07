@@ -15,7 +15,7 @@ export default function RoleSelection() {
             alert('✅ Access granted! Redirecting to Host Dashboard...');
             router.push('/leaderboard');
         } else {
-            router.push('/game');
+            router.push('/start-experience');
         }
     };
 

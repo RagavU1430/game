@@ -118,7 +118,7 @@ app.get('/api/game-status', (req, res) => {
     res.json({ gameStarted });
 });
 
-const PORT = 5000;
+const PORT = 8080;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on all interfaces at port ${PORT}`);
 });

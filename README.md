@@ -41,8 +41,9 @@ Once both servers are running:
 4. Monitor live leaderboard and violations
 
 ### For Participants:
-1. Open http://localhost:3000/game
-2. Enter your name and click **"JOIN SESSION"**
+1. Open http://localhost:3000/start-experience
+2. Click **"ENTER GAME FLOW"**
+3. Enter your name and click **"JOIN SESSION"**
 3. Wait for host to start the game
 4. Play through 5 levels of tile matching
 5. ⚠️ **Don't switch tabs!** Violations are tracked
