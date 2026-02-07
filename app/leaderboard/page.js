@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getApiUrl, getWsUrl } from '../config';
+
 
 export default function Leaderboard() {
     const [data, setData] = useState({
@@ -29,8 +31,10 @@ export default function Leaderboard() {
             if (!isComponentMounted) return;
 
             try {
-                const hostname = window.location.hostname;
-                ws = new WebSocket(`ws://${hostname}:8080`);
+                const wsUrl = getWsUrl();
+                ws = new WebSocket(wsUrl);
+
+
 
                 ws.onopen = () => {
                     console.log('✅ Leaderboard connected to server');
@@ -95,8 +99,9 @@ export default function Leaderboard() {
 
     const startGame = async () => {
         try {
-            const hostname = window.location.hostname;
-            await fetch(`http://${hostname}:8080/api/start-game`, { method: 'POST' });
+            const apiUrl = getApiUrl();
+            await fetch(`${apiUrl}/api/start-game`, { method: 'POST' });
+
         } catch (e) {
             alert('Error starting game');
         }
@@ -104,9 +109,10 @@ export default function Leaderboard() {
 
     const resetGame = async () => {
         if (confirm('Are you sure you want to reset all game data?')) {
-            const hostname = window.location.hostname;
-            await fetch(`http://${hostname}:8080/api/reset-game`, { method: 'POST' });
+            const apiUrl = getApiUrl();
+            await fetch(`${apiUrl}/api/reset-game`, { method: 'POST' });
         }
+
     };
 
     return (

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiUrl, getWsUrl } from '../config';
+
 
 const LEVEL_QUESTIONS = {
     1: [
@@ -83,8 +85,11 @@ export default function GamePage() {
             if (!isComponentMounted) return;
 
             try {
-                const hostname = window.location.hostname;
-                ws = new WebSocket(`ws://${hostname}:8080`);
+                const wsUrl = getWsUrl();
+                console.log('Connecting to:', wsUrl);
+                ws = new WebSocket(wsUrl);
+
+
 
                 ws.onopen = () => {
                     console.log('✅ Connected to server');
@@ -126,8 +131,10 @@ export default function GamePage() {
         // Initial status check
         const checkStatus = async () => {
             try {
-                const hostname = window.location.hostname;
-                const res = await fetch(`http://${hostname}:8080/api/game-status`);
+                const apiUrl = getApiUrl();
+                const res = await fetch(`${apiUrl}/api/game-status`);
+
+
                 const data = await res.json();
                 if (data.gameStarted) setGameState(prev => ({ ...prev, isStartedByHost: true }));
             } catch (e) {
@@ -150,8 +157,9 @@ export default function GamePage() {
         const handleVisibility = () => {
             const currentState = gameStateRef.current;
             if (currentState.isRegistered && currentState.isStartedByHost && document.hidden) {
-                const hostname = window.location.hostname;
-                fetch(`http://${hostname}:8080/api/report-violation`, {
+                const apiUrl = getApiUrl();
+                fetch(`${apiUrl}/api/report-violation`, {
+
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ playerName: currentState.playerName, violationType: 'tab-switch' })
@@ -175,8 +183,9 @@ export default function GamePage() {
     const register = async (name) => {
         if (!name.trim()) return;
         try {
-            const hostname = window.location.hostname;
-            const res = await fetch(`http://${hostname}:8080/api/register-participant`, {
+            const apiUrl = getApiUrl();
+            const res = await fetch(`${apiUrl}/api/register-participant`, {
+
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ playerName: name })
@@ -236,8 +245,9 @@ export default function GamePage() {
         const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
 
         try {
-            const hostname = window.location.hostname;
-            await fetch(`http://${hostname}:8080/api/submit-score`, {
+            const apiUrl = getApiUrl();
+            await fetch(`${apiUrl}/api/submit-score`, {
+
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
