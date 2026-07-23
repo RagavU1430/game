@@ -11,45 +11,49 @@ const Result = lazy(() => import('./pages/Result'));
 const Admin = lazy(() => import('./pages/Admin'));
 
 function App() {
-  // Persist current view across page reloads
+  // Use sessionStorage so new tabs always start fresh on the Home page,
+  // while reloading the same tab preserves current state unless it was on result page.
   const [view, setViewInternal] = useState(() => {
-    return localStorage.getItem('quiz_current_view') || 'home';
+    const saved = sessionStorage.getItem('quiz_current_view');
+    if (saved === 'result') {
+      sessionStorage.removeItem('quiz_current_view');
+      return 'home';
+    }
+    return saved || 'home';
   });
 
   const [teamName, setTeamName] = useState(() => {
-    return localStorage.getItem('quiz_current_team') || '';
+    return sessionStorage.getItem('quiz_current_team') || '';
   });
 
   const [score, setScore] = useState(() => {
-    return Number(localStorage.getItem('quiz_current_score')) || 0;
+    return Number(sessionStorage.getItem('quiz_current_score')) || 0;
   });
 
   const [totalTime, setTotalTime] = useState(() => {
-    return Number(localStorage.getItem('quiz_current_time')) || 0;
+    return Number(sessionStorage.getItem('quiz_current_time')) || 0;
   });
 
-  const [isCompleted, setIsCompleted] = useState(() => {
-    return localStorage.getItem('quiz_completed_device') === 'true';
-  });
+  const [isCompleted, setIsCompleted] = useState(false);
 
   const [run, setRun] = useState(0);
   const [showTeamModalFromAdmin, setShowTeamModalFromAdmin] = useState(false);
 
   const setView = (newView) => {
     setViewInternal(newView);
-    localStorage.setItem('quiz_current_view', newView);
+    sessionStorage.setItem('quiz_current_view', newView);
   };
 
   const begin = (name) => {
     const selectedTeam = name || teamName || 'Anonymous Team';
     setTeamName(selectedTeam);
-    localStorage.setItem('quiz_current_team', selectedTeam);
+    sessionStorage.setItem('quiz_current_team', selectedTeam);
     setScore(0);
-    localStorage.setItem('quiz_current_score', '0');
+    sessionStorage.setItem('quiz_current_score', '0');
     setTotalTime(0);
-    localStorage.setItem('quiz_current_time', '0');
+    sessionStorage.setItem('quiz_current_time', '0');
     setIsCompleted(false);
-    localStorage.setItem('quiz_completed_device', 'false');
+    sessionStorage.setItem('quiz_completed_device', 'false');
     setRun((x) => x + 1);
 
     // Call Central Server API to register Team Login across network
@@ -82,9 +86,9 @@ function App() {
 
   const handleGameComplete = (finalScore, finalTime) => {
     setScore(finalScore);
-    localStorage.setItem('quiz_current_score', String(finalScore));
+    sessionStorage.setItem('quiz_current_score', String(finalScore));
     setTotalTime(finalTime);
-    localStorage.setItem('quiz_current_time', String(finalTime));
+    sessionStorage.setItem('quiz_current_time', String(finalTime));
 
     const currentTeam = teamName || 'Anonymous Team';
 
@@ -118,8 +122,9 @@ function App() {
   };
 
   const handleAutoReturnHome = () => {
+    sessionStorage.removeItem('quiz_current_view');
+    sessionStorage.removeItem('quiz_completed_device');
     setIsCompleted(true);
-    localStorage.setItem('quiz_completed_device', 'true');
     setView('home');
   };
 

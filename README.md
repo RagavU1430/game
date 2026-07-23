@@ -12,3 +12,7 @@ Run locally with `npm run dev`.
 ```
 
 The game automatically uses every entry in the JSON file for its question count, progress bar, and final score.
+
+
+# Spot the Differences Challenge — Multi-Device Sync
+
