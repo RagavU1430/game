@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaTrophy, FaClock, FaUsers, FaCircleCheck } from 'react-icons/fa6';
 import FloatingBackground from '../components/FloatingBackground';
@@ -11,7 +12,24 @@ function formatTime(ms) {
   return `${mins}:${secs}:${millis}`;
 }
 
-export default function Result({ score, totalTime = 0, teamName = '' }) {
+export default function Result({ score, totalTime = 0, teamName = '', onAutoReturnHome }) {
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (onAutoReturnHome) onAutoReturnHome();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [onAutoReturnHome]);
+
   return (
     <>
       <FloatingBackground />
@@ -66,7 +84,7 @@ export default function Result({ score, totalTime = 0, teamName = '' }) {
             <FaCircleCheck className="check-icon" />
             <div>
               <strong>Recorded on Live Leaderboard</strong>
-              <p>Your team's score and time are registered. Please await final results from the event host!</p>
+              <p>Your team's score and time are registered. Returning to Home in <b>{countdown}s</b>...</p>
             </div>
           </div>
         </motion.div>

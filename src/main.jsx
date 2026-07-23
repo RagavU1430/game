@@ -28,6 +28,10 @@ function App() {
     return Number(localStorage.getItem('quiz_current_time')) || 0;
   });
 
+  const [isCompleted, setIsCompleted] = useState(() => {
+    return localStorage.getItem('quiz_completed_device') === 'true';
+  });
+
   const [run, setRun] = useState(0);
   const [showTeamModalFromAdmin, setShowTeamModalFromAdmin] = useState(false);
 
@@ -44,6 +48,8 @@ function App() {
     localStorage.setItem('quiz_current_score', '0');
     setTotalTime(0);
     localStorage.setItem('quiz_current_time', '0');
+    setIsCompleted(false);
+    localStorage.setItem('quiz_completed_device', 'false');
     setRun((x) => x + 1);
 
     // Call Central Server API to register Team Login across network
@@ -53,7 +59,7 @@ function App() {
       body: JSON.stringify({ teamName: selectedTeam })
     }).catch(() => {});
 
-    // Fallback to local storage
+    // Fallback local storage update
     try {
       const activeTeams = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
       const newActive = {
@@ -111,6 +117,12 @@ function App() {
     setView('result');
   };
 
+  const handleAutoReturnHome = () => {
+    setIsCompleted(true);
+    localStorage.setItem('quiz_completed_device', 'true');
+    setView('home');
+  };
+
   useEffect(() => { document.title = 'Spot the Differences Challenge'; }, []);
 
   return (
@@ -123,6 +135,7 @@ function App() {
             <Home
               onStart={(name) => begin(name)}
               onOpenAdmin={() => setView('admin')}
+              isCompleted={isCompleted}
             />
           </motion.div>
         )}
@@ -142,9 +155,7 @@ function App() {
                 score={score}
                 totalTime={totalTime}
                 teamName={teamName}
-                onAgain={() => setView('home')}
-                onHome={() => setView('home')}
-                onOpenAdmin={() => setView('admin')}
+                onAutoReturnHome={handleAutoReturnHome}
               />
             </Suspense>
           </motion.div>

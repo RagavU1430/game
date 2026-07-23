@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaArrowRight, FaLeaf, FaUserShield } from 'react-icons/fa6';
+import { FaLeaf, FaHeart, FaUserShield } from 'react-icons/fa6';
 import { useState } from 'react';
 import Button from '../components/Button';
 import FloatingBackground from '../components/FloatingBackground';
@@ -7,7 +7,7 @@ import RulesModal from '../components/RulesModal';
 import TeamEntry from '../components/TeamEntry';
 import InteractiveLogo from '../components/InteractiveLogo';
 
-export default function Home({ onStart, onOpenAdmin }) {
+export default function Home({ onStart, onOpenAdmin, isCompleted = false }) {
   const [rules, setRules] = useState(false);
   const [teamModal, setTeamModal] = useState(false);
 
@@ -32,21 +32,45 @@ export default function Home({ onStart, onOpenAdmin }) {
           transition={{ duration: 0.7 }}
         >
           <p className="eyebrow"><FaLeaf /> Department of AI & DS</p>
-          <h1>Spot the <em>Differences</em> Challenge</h1>
-          <p className="hero-subtitle">
-            Observe carefully, count the hidden differences, and test your team's observation skills.
-          </p>
-          <div className="hero-actions">
-            <Button onClick={() => setRules(true)}>
-              Start the game <FaArrowRight />
-            </Button>
-            <Button className="secondary admin-nav-btn" onClick={onOpenAdmin}>
-              <FaUserShield /> Admin Panel
-            </Button>
-          </div>
-          <span className="gentle-note" style={{ marginTop: '0.8rem', display: 'block' }}>
-            🏆 Track your team's score & time on the leaderboard!
-          </span>
+
+          {isCompleted ? (
+            <motion.div
+              className="completed-thankyou-card"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="thankyou-heart">
+                <FaHeart />
+              </div>
+              <h1>Thank you for coming to our club!</h1>
+              <p className="hero-subtitle">
+                Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
+              </p>
+              <div className="thankyou-badge-row">
+                <span className="club-tag">AI Frontier Club</span>
+                <span className="dept-tag">Department of AI & DS</span>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <h1>Spot the <em>Differences</em> Challenge</h1>
+              <p className="hero-subtitle">
+                Observe carefully, count the hidden differences, and test your team's observation skills.
+              </p>
+              <div className="hero-actions">
+                <Button onClick={() => setRules(true)}>
+                  Start the game
+                </Button>
+                <Button className="secondary admin-nav-btn" onClick={onOpenAdmin}>
+                  <FaUserShield /> Admin Panel
+                </Button>
+              </div>
+              <span className="gentle-note" style={{ marginTop: '0.8rem', display: 'block' }}>
+                🏆 Track your team's score & time on the leaderboard!
+              </span>
+            </>
+          )}
         </motion.div>
 
         <motion.div
@@ -59,16 +83,20 @@ export default function Home({ onStart, onOpenAdmin }) {
         </motion.div>
       </section>
 
-      <RulesModal
-        open={rules}
-        onClose={() => setRules(false)}
-        onAccept={handleRulesAccept}
-      />
+      {!isCompleted && (
+        <>
+          <RulesModal
+            open={rules}
+            onClose={() => setRules(false)}
+            onAccept={handleRulesAccept}
+          />
 
-      <TeamEntry
-        open={teamModal}
-        onSubmit={handleTeamSubmit}
-      />
+          <TeamEntry
+            open={teamModal}
+            onSubmit={handleTeamSubmit}
+          />
+        </>
+      )}
     </>
   );
 }

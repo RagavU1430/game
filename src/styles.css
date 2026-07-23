@@ -644,6 +644,48 @@ button, input, select { font: inherit; }
 
 .next-button { margin: 0 auto; display: flex; }
 
+/* ── Completed Thank You Card ── */
+.completed-thankyou-card {
+  padding: 1rem 0;
+}
+
+.thankyou-heart {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  font-size: 1.8rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+}
+
+.thankyou-badge-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1.4rem;
+}
+
+.club-tag, .dept-tag {
+  padding: 0.45rem 1rem;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.club-tag {
+  background: rgba(121, 82, 179, 0.15);
+  color: #6b21a8;
+}
+
+.dept-tag {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
 /* ── Result Page ── */
 .result-page {
   min-height: 100vh;
