@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Production build
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local database / temporary cache
+leaderboard_db.json
+
+# IDE / System
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/
+.idea/

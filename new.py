@@ -1,0 +1,645 @@
+import os
+
+html_code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spot the Difference Quiz</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 960px;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .game-header { text-align: center; margin-bottom: 24px; }
+    .game-header h1 {
+      background: linear-gradient(to right, #a855f7, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .game-header p { color: #94a3b8; font-size: 1.05rem; }
+    
+    .score-board {
+      display: flex; justify-content: space-around; align-items: center; gap: 16px;
+      margin-bottom: 24px; background: rgba(15, 23, 42, 0.6);
+      padding: 16px 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);
+      font-weight: 700; color: #cbd5e1; flex-wrap: wrap; font-size: 1.1rem;
+    }
+    .score-board div span { color: #c084fc; font-size: 1.2rem; }
+    
+    .level-selector {
+      display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .level-btn {
+      padding: 10px 20px; border: 1px solid rgba(168, 85, 247, 0.3);
+      background: rgba(15, 23, 42, 0.5); border-radius: 20px; color: #cbd5e1;
+      cursor: pointer; font-weight: 600; transition: all 0.25s ease; font-size: 0.95rem;
+    }
+    .level-btn.active {
+      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+      color: white; border-color: #a855f7; box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4);
+    }
+    .level-btn:hover:not(.active) {
+      border-color: #c084fc; color: #f1f5f9; background: rgba(168, 85, 247, 0.15);
+    }
+
+    .image-display {
+      display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .canvas-card {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .canvas-card label {
+      font-size: 0.9rem; font-weight: 700; color: #a855f7; text-transform: uppercase; letter-spacing: 1px;
+    }
+    canvas {
+      width: 100%; max-width: 430px; height: auto; border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 2px solid rgba(255, 255, 255, 0.1);
+      background: #0f172a; cursor: crosshair; transition: border-color 0.2s;
+    }
+    canvas:hover { border-color: rgba(168, 85, 247, 0.5); }
+
+    .quiz-section {
+      background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px; padding: 24px; text-align: center;
+    }
+    .quiz-section h3 { margin-bottom: 16px; color: #f8fafc; font-size: 1.25rem; font-weight: 600; }
+    
+    .input-group {
+      display: flex; justify-content: center; align-items: center; gap: 12px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .input-group input {
+      padding: 12px 18px; font-size: 1.2rem; width: 130px; text-align: center;
+      border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 12px; outline: none;
+      background: #0f172a; color: white; transition: border-color 0.2s;
+    }
+    .input-group input:focus { border-color: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
+    
+    .btn {
+      padding: 12px 28px; font-size: 1rem; font-weight: 700; border: none; border-radius: 12px;
+      cursor: pointer; transition: all 0.25s ease; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #a855f7 0%, #6d28d9 100%); color: white;
+      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5); }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+
+    .btn-hint {
+      background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 12px 20px;
+    }
+    .btn-hint:hover { background: rgba(245, 158, 11, 0.3); color: #fef08a; }
+
+    .feedback {
+      margin-top: 16px; padding: 16px; border-radius: 12px; font-weight: 600;
+      display: none; font-size: 1.05rem; animation: fadeIn 0.3s ease;
+    }
+    .feedback.correct { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; }
+    .feedback.wrong { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; }
+    .feedback.info { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fde68a; }
+
+    .hidden { display: none !important; }
+    
+    .game-over {
+      text-align: center; padding: 40px 20px; background: rgba(15, 23, 42, 0.6);
+      border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); animation: fadeIn 0.4s ease;
+    }
+    .game-over h2 {
+      background: linear-gradient(to right, #a855f7, #ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 2.4rem; margin-bottom: 16px; font-weight: 800;
+    }
+    .game-over p { color: #cbd5e1; margin: 10px 0; font-size: 1.2rem; }
+    .game-over strong { color: #c084fc; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 650px) {
+      .container { padding: 20px 16px; }
+      .game-header h1 { font-size: 1.8rem; }
+      .score-board { gap: 10px; font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="game-header">
+      <h1>🔍 Spot the Difference Quiz</h1>
+      <p>Compare both scenes! You can count & type your answer, or click differences on the right image!</p>
+    </div>
+
+    <div class="score-board">
+      <div>🏆 Score: <span id="score">0</span></div>
+      <div>🎯 Level: <span id="level-name">1: Easy</span></div>
+      <div>Found: <span id="found-count">0/3</span></div>
+      <div>⏱️ Time: <span id="timer">00:00</span></div>
+    </div>
+
+    <div class="level-selector" id="level-selector">
+      <button class="level-btn active" onclick="loadLevel(0)">Level 1: Space (3 diff)</button>
+      <button class="level-btn" onclick="loadLevel(1)">Level 2: Ocean (5 diff)</button>
+      <button class="level-btn" onclick="loadLevel(2)">Level 3: Park (7 diff)</button>
+      <button class="level-btn" onclick="loadLevel(3)">Level 4: City (10 diff)</button>
+    </div>
+
+    <div id="game-area">
+      <div class="image-display">
+        <div class="canvas-card">
+          <label>Original Scene</label>
+          <canvas id="canvas-left" width="420" height="300"></canvas>
+        </div>
+        <div class="canvas-card">
+          <label>Modified Scene (Click Differences)</label>
+          <canvas id="canvas-right" width="420" height="300"></canvas>
+        </div>
+      </div>
+
+      <div class="quiz-section">
+        <h3>How many differences are there in total?</h3>
+        <div class="input-group">
+          <input type="number" id="answer-input" min="0" max="20" placeholder="?">
+          <button class="btn btn-primary" onclick="checkAnswer()">Submit Count</button>
+          <button class="btn btn-hint" onclick="getHint()">💡 Hint</button>
+        </div>
+        <div id="feedback" class="feedback"></div>
+        <div style="margin-top: 16px;">
+          <button class="btn btn-secondary hidden" id="next-btn" onclick="nextLevel()">Next Level →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-over hidden" id="game-over">
+      <h2>🎉 Game Complete!</h2>
+      <p>Your final score: <strong id="final-score">0</strong> / <strong id="max-score">0</strong></p>
+      <p id="performance-text" style="font-size: 1.3rem; margin: 16px 0; font-weight: 700;"></p>
+      <button class="btn btn-primary" onclick="restartGame()" style="margin-top: 12px;">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    // Audio Context for SFX
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (type === 'correct') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(130, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'click') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        }
+      } catch(e) {}
+    }
+
+    const levels = [
+      {
+        name: "Level 1: Space Exploration",
+        totalDiffs: 3,
+        diffLocations: [
+          { x: 330, y: 60, r: 25, hint: "Look at the star near the upper right moon!", found: false },
+          { x: 120, y: 220, r: 25, hint: "Check the astronaut's visor color!", found: false },
+          { x: 260, y: 160, r: 25, hint: "Look at the window on the rocket ship!", found: false }
+        ]
+      },
+      {
+        name: "Level 2: Deep Sea Coral",
+        totalDiffs: 5,
+        diffLocations: [
+          { x: 90, y: 110, r: 25, hint: "Check the submarine window color!", found: false },
+          { x: 340, y: 230, r: 25, hint: "Check the pink starfish on the bottom right!", found: false },
+          { x: 230, y: 140, r: 25, hint: "Look at the yellow fish stripes!", found: false },
+          { x: 290, y: 70, r: 20, hint: "Notice the extra rising bubble!", found: false },
+          { x: 150, y: 250, r: 25, hint: "Look near the treasure chest lock!", found: false }
+        ]
+      },
+      {
+        name: "Level 3: Autumn Park",
+        totalDiffs: 7,
+        diffLocations: [
+          { x: 70, y: 60, r: 25, hint: "Check the sun's smiling expression!", found: false },
+          { x: 320, y: 80, r: 25, hint: "Look at the bird in the sky!", found: false },
+          { x: 140, y: 150, r: 25, hint: "Check the red apple hanging on the tree!", found: false },
+          { x: 250, y: 220, r: 25, hint: "Look at the dog's tail length!", found: false },
+          { x: 370, y: 210, r: 25, hint: "Look at the bicycle basket color!", found: false },
+          { x: 190, y: 80, r: 25, hint: "Notice the cloud size above the tree!", found: false },
+          { x: 290, y: 170, r: 25, hint: "Check the park bench slat shadow!", found: false }
+        ]
+      },
+      {
+        name: "Level 4: Cyber City Skyline",
+        totalDiffs: 10,
+        diffLocations: [
+          { x: 50, y: 70, r: 20, hint: "Check the neon sign on the left skyscraper!", found: false },
+          { x: 370, y: 60, r: 25, hint: "Look at the full moon glow ring!", found: false },
+          { x: 210, y: 90, r: 20, hint: "Notice the flying car headlight glow!", found: false },
+          { x: 130, y: 180, r: 20, hint: "Look at the middle building window lights!", found: false },
+          { x: 290, y: 140, r: 20, hint: "Check the hologram beam color!", found: false },
+          { x: 340, y: 220, r: 20, hint: "Look at the robot's antenna!", found: false },
+          { x: 180, y: 250, r: 20, hint: "Check the street light status!", found: false },
+          { x: 80, y: 240, r: 20, hint: "Look at the digital billboard graph!", found: false },
+          { x: 250, y: 40, r: 20, hint: "Check the satellite dish angle!", found: false },
+          { x: 400, y: 160, r: 20, hint: "Look at the signal tower beacon light!", found: false }
+        ]
+      }
+    ];
+
+    let currentLevel = 0;
+    let score = 0;
+    let timerInterval;
+    let seconds = 0;
+    let answered = false;
+    let hintsUsed = 0;
+
+    function drawScene(ctx, levelIdx, isRight) {
+      const w = 420, h = 300;
+      ctx.clearRect(0, 0, w, h);
+
+      if (levelIdx === 0) {
+        // Space Scene
+        ctx.fillStyle = '#090d16'; ctx.fillRect(0, 0, w, h);
+        // Stars
+        const stars = [[30,40],[100,80],[200,30],[280,120],[330,60],[390,140],[70,180],[180,240],[350,260]];
+        stars.forEach(([sx, sy], i) => {
+          if (isRight && i === 4) return; // Diff 1: Missing star
+          ctx.fillStyle = i % 2 === 0 ? '#fff' : '#fef08a';
+          ctx.beginPath(); ctx.arc(sx, sy, i%2===0?2.5:1.5, 0, Math.PI*2); ctx.fill();
+        });
+        // Moon
+        ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.arc(360, 70, 35, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.arc(350, 60, 8, 0, Math.PI*2); ctx.fill();
+        // Rocket
+        ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.ellipse(260, 160, 18, 45, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = (isRight ? '#f59e0b' : '#38bdf8'); // Diff 2: Rocket window color
+        ctx.beginPath(); ctx.arc(265, 155, 10, 0, Math.PI*2); ctx.fill();
+        // Astronaut
+        ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.arc(120, 220, 22, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = (isRight ? '#ec4899' : '#0284c7'); // Diff 3: Visor color
+        ctx.beginPath(); ctx.arc(122, 220, 12, 0, Math.PI*2); ctx.fill();
+      } else if (levelIdx === 1) {
+        // Ocean Scene
+        ctx.fillStyle = '#0284c7'; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#eab308'; ctx.fillRect(0, 250, w, 50); // Sand
+        // Submarine
+        ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.ellipse(90, 110, 45, 25, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = (isRight ? '#ef4444' : '#38bdf8'); // Diff 1: Sub window
+        ctx.beginPath(); ctx.arc(90, 110, 12, 0, Math.PI*2); ctx.fill();
+        // Fish
+        ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.ellipse(230, 140, 20, 10, 0, 0, Math.PI*2); ctx.fill();
+        if (!isRight) { ctx.fillStyle = '#000'; ctx.fillRect(225, 133, 4, 14); } // Diff 2: Fish stripe missing
+        // Starfish
+        ctx.fillStyle = (isRight ? '#a855f7' : '#ec4899'); // Diff 3: Starfish color
+        ctx.beginPath(); ctx.arc(340, 270, 15, 0, Math.PI*2); ctx.fill();
+        // Bubbles
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2;
+        [[280,120],[290,70],[270,180]].forEach(([bx,by], i) => {
+          if (isRight && i === 1) return; // Diff 4: Missing bubble
+          ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI*2); ctx.stroke();
+        });
+        // Treasure Chest
+        ctx.fillStyle = '#78350f'; ctx.fillRect(130, 230, 40, 25);
+        ctx.fillStyle = (isRight ? '#cbd5e1' : '#f59e0b'); // Diff 5: Lock color
+        ctx.fillRect(146, 240, 8, 10);
+      } else if (levelIdx === 2) {
+        // Park Scene
+        ctx.fillStyle = '#38bdf8'; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#22c55e'; ctx.fillRect(0, 200, w, 100); // Grass
+        // Sun
+        ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(70, 60, 30, 0, Math.PI*2); ctx.fill();
+        if (isRight) { ctx.fillStyle = '#000'; ctx.fillRect(60, 55, 20, 4); } // Diff 1: Sun face sunglasses
+        // Cloud
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(190, 80, (isRight ? 18 : 28), 0, Math.PI*2); ctx.fill(); // Diff 2: Cloud size
+        // Tree
+        ctx.fillStyle = '#854d0e'; ctx.fillRect(130, 140, 20, 80);
+        ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.arc(140, 120, 45, 0, Math.PI*2); ctx.fill();
+        // Apple
+        if (!isRight) { ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(140, 130, 7, 0, Math.PI*2); ctx.fill(); } // Diff 3: Apple missing
+        // Bird
+        ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc((isRight ? 340 : 320), 80, 8, 0, Math.PI*2); ctx.fill(); // Diff 4: Bird position
+        // Dog
+        ctx.fillStyle = '#d97706'; ctx.fillRect(230, 220, 30, 18);
+        ctx.fillRect((isRight ? 255 : 258), 215, (isRight ? 4 : 12), 5); // Diff 5: Tail length
+        // Bench
+        ctx.fillStyle = '#78350f'; ctx.fillRect(270, 200, 40, 15);
+        // Bike basket
+        ctx.fillStyle = (isRight ? '#a855f7' : '#ef4444'); ctx.fillRect(365, 195, 15, 12); // Diff 6: Basket color
+        // Bench shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(270, (isRight ? 218 : 215), 40, 4); // Diff 7: Shadow height
+      } else if (levelIdx === 3) {
+        // Cyber City
+        ctx.fillStyle = '#090514'; ctx.fillRect(0, 0, w, h);
+        // Moon
+        ctx.fillStyle = '#f1f5f9'; ctx.beginPath(); ctx.arc(370, 60, 25, 0, Math.PI*2); ctx.fill();
+        if (isRight) { ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 4; ctx.stroke(); } // Diff 1: Moon outline
+        // Buildings
+        ctx.fillStyle = '#1e1b4b'; ctx.fillRect(30, 80, 70, 220);
+        ctx.fillStyle = '#312e81'; ctx.fillRect(110, 120, 60, 180);
+        ctx.fillStyle = '#4c1d95'; ctx.fillRect(180, 160, 80, 140);
+        // Neon Sign Left
+        ctx.fillStyle = (isRight ? '#ec4899' : '#06b6d4'); ctx.fillRect(45, 100, 40, 10); // Diff 2: Neon color
+        // Windows
+        ctx.fillStyle = '#fef08a';
+        for(let wy=140; wy<280; wy+=25) {
+          if (isRight && wy === 190) continue; // Diff 3: Missing window row
+          ctx.fillRect(125, wy, 12, 12); ctx.fillRect(145, wy, 12, 12);
+        }
+        // Flying Car
+        ctx.fillStyle = '#38bdf8'; ctx.fillRect(200, 90, 30, 10);
+        if (!isRight) { ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(230, 95, 4, 0, Math.PI*2); ctx.fill(); } // Diff 4: Headlight
+        // Hologram
+        ctx.fillStyle = (isRight ? '#a855f7' : '#10b981'); ctx.beginPath(); ctx.arc(290, 140, 15, 0, Math.PI*2); ctx.fill(); // Diff 5: Hologram
+        // Robot
+        ctx.fillStyle = '#64748b'; ctx.fillRect(330, 210, 20, 30);
+        if (!isRight) { ctx.fillRect(338, 200, 4, 10); } // Diff 6: Robot antenna
+        // Street light
+        ctx.fillStyle = (isRight ? '#475569' : '#f59e0b'); ctx.beginPath(); ctx.arc(180, 250, 8, 0, Math.PI*2); ctx.fill(); // Diff 7: Street light off
+        // Billboard
+        ctx.fillStyle = '#0284c7'; ctx.fillRect(70, 230, 30, 20);
+        if (isRight) { ctx.fillStyle = '#ef4444'; ctx.fillRect(75, 235, 20, 10); } // Diff 8: Billboard graph
+        // Satellite
+        ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.arc(250, 40, 10, (isRight?0:1), (isRight?Math.PI:Math.PI*1.5)); ctx.fill(); // Diff 9: Dish angle
+        // Signal Tower
+        ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(400, 160, (isRight?8:4), 0, Math.PI*2); ctx.fill(); // Diff 10: Beacon size
+      }
+    }
+
+    function renderDiffMarkers(ctx, levelIdx) {
+      const level = levels[levelIdx];
+      level.diffLocations.forEach(d => {
+        if (d.found) {
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+          ctx.fill();
+        }
+      });
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      seconds = 0;
+      document.getElementById('timer').textContent = '00:00';
+      timerInterval = setInterval(() => {
+        seconds++;
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById('timer').textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function updateFoundCount() {
+      const level = levels[currentLevel];
+      const found = level.diffLocations.filter(d => d.found).length;
+      document.getElementById('found-count').textContent = `${found}/${level.totalDiffs}`;
+    }
+
+    function loadLevel(index) {
+      currentLevel = index;
+      answered = false;
+      hintsUsed = 0;
+      const level = levels[index];
+      level.diffLocations.forEach(d => d.found = false);
+
+      document.getElementById('level-name').textContent = level.name;
+      document.getElementById('answer-input').value = '';
+      document.getElementById('feedback').className = 'feedback';
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('next-btn').classList.add('hidden');
+
+      document.querySelectorAll('.level-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+
+      const cLeft = document.getElementById('canvas-left');
+      const cRight = document.getElementById('canvas-right');
+      const ctxL = cLeft.getContext('2d');
+      const ctxR = cRight.getContext('2d');
+
+      drawScene(ctxL, index, false);
+      drawScene(ctxR, index, true);
+      updateFoundCount();
+
+      startTimer();
+    }
+
+    function handleRightCanvasClick(e) {
+      if (answered) return;
+      playSound('click');
+
+      const canvas = document.getElementById('canvas-right');
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clickX = (e.clientX - rect.left) * scaleX;
+      const clickY = (e.clientY - rect.top) * scaleY;
+
+      const level = levels[currentLevel];
+      let hit = false;
+
+      level.diffLocations.forEach(d => {
+        const dist = Math.hypot(clickX - d.x, clickY - d.y);
+        if (dist <= d.r + 10 && !d.found) {
+          d.found = true;
+          hit = true;
+          playSound('correct');
+        }
+      });
+
+      const ctxR = canvas.getContext('2d');
+      drawScene(ctxR, currentLevel, true);
+      renderDiffMarkers(ctxR, currentLevel);
+      updateFoundCount();
+
+      const foundAll = level.diffLocations.every(d => d.found);
+      if (foundAll && !answered) {
+        document.getElementById('answer-input').value = level.totalDiffs;
+        checkAnswer();
+      } else if (hit) {
+        const fb = document.getElementById('feedback');
+        fb.className = 'feedback info';
+        fb.textContent = '🎯 Spot on! You clicked a difference!';
+        fb.style.display = 'block';
+      }
+    }
+
+    function getHint() {
+      const level = levels[currentLevel];
+      const unfound = level.diffLocations.filter(d => !d.found);
+      const fb = document.getElementById('feedback');
+      
+      if (unfound.length === 0) {
+        fb.className = 'feedback info';
+        fb.textContent = '💡 You already found all the differences! Click Submit Count!';
+      } else {
+        const hintObj = unfound[Math.floor(Math.random() * unfound.length)];
+        fb.className = 'feedback info';
+        fb.textContent = `💡 Hint: ${hintObj.hint}`;
+        hintsUsed++;
+      }
+      fb.style.display = 'block';
+    }
+
+    function checkAnswer() {
+      if (answered) return;
+
+      const input = document.getElementById('answer-input');
+      const userAnswer = parseInt(input.value);
+      const level = levels[currentLevel];
+      const feedback = document.getElementById('feedback');
+
+      if (isNaN(userAnswer)) {
+        feedback.className = 'feedback wrong';
+        feedback.textContent = '⚠️ Please enter a valid number!';
+        feedback.style.display = 'block';
+        playSound('wrong');
+        return;
+      }
+
+      answered = true;
+      clearInterval(timerInterval);
+
+      // Reveal all markers
+      level.diffLocations.forEach(d => d.found = true);
+      const canvasR = document.getElementById('canvas-right');
+      const ctxR = canvasR.getContext('2d');
+      drawScene(ctxR, currentLevel, true);
+      renderDiffMarkers(ctxR, currentLevel);
+      updateFoundCount();
+
+      if (userAnswer === level.totalDiffs) {
+        playSound('correct');
+        const timeBonus = Math.max(0, 60 - seconds);
+        const points = 100 + timeBonus - (hintsUsed * 10);
+        score += Math.max(50, points);
+        document.getElementById('score').textContent = score;
+
+        feedback.className = 'feedback correct';
+        feedback.innerHTML = `✅ Correct! There are exactly <strong>${level.totalDiffs}</strong> differences.<br>⏱️ Time: ${seconds}s | Earned +${Math.max(50, points)} points!`;
+      } else {
+        playSound('wrong');
+        feedback.className = 'feedback wrong';
+        feedback.innerHTML = `❌ Incorrect. You guessed <strong>${userAnswer}</strong>, but there are <strong>${level.totalDiffs}</strong> differences.<br>All differences are highlighted in green circles above!`;
+      }
+
+      feedback.style.display = 'block';
+
+      if (currentLevel < levels.length - 1) {
+        document.getElementById('next-btn').classList.remove('hidden');
+      } else {
+        setTimeout(showGameOver, 2000);
+      }
+    }
+
+    function nextLevel() {
+      loadLevel(currentLevel + 1);
+    }
+
+    function showGameOver() {
+      document.getElementById('game-area').classList.add('hidden');
+      document.getElementById('level-selector').classList.add('hidden');
+      document.getElementById('game-over').classList.remove('hidden');
+
+      const maxScore = levels.length * 160;
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('max-score').textContent = maxScore;
+
+      let perf = '';
+      if (score >= maxScore * 0.8) perf = '🏆 Eagle Vision Master! Spotting differences is your superpower!';
+      else if (score >= maxScore * 0.5) perf = '🌟 Impressive Observation Skills! Great job!';
+      else perf = '🔍 Good try! Training your eyes takes practice!';
+
+      document.getElementById('performance-text').textContent = perf;
+    }
+
+    function restartGame() {
+      score = 0;
+      currentLevel = 0;
+      document.getElementById('score').textContent = '0';
+      document.getElementById('game-area').classList.remove('hidden');
+      document.getElementById('level-selector').classList.remove('hidden');
+      document.getElementById('game-over').classList.add('hidden');
+      loadLevel(0);
+    }
+
+    document.getElementById('canvas-right').addEventListener('click', handleRightCanvasClick);
+    document.getElementById('answer-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') checkAnswer();
+    });
+
+    // Initialize
+    loadLevel(0);
+  </script>
+</body>
+</html>
+"""
+
+dir_path = os.path.dirname(os.path.abspath(__file__))
+output_file = os.path.join(dir_path, "spot_the_difference_quiz.html")
+
+with open(output_file, "w", encoding="utf-8") as f:
+    f.write(html_code)
+
+print(f"File saved successfully to: {output_file}")
