@@ -43,7 +43,7 @@ export default function Home({ onStart, onOpenAdmin, isCompleted = false }) {
               <div className="thankyou-heart">
                 <FaHeart />
               </div>
-              <h1>Thank you for coming to our club!</h1>
+              <h1>Thank you for coming to our club nanba & nanbi!</h1>
               <p className="hero-subtitle">
                 Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
               </p>
