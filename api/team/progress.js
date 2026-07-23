@@ -1,18 +1,18 @@
 import { loadDB, saveDB } from '../_store.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = loadDB();
+  const db = await loadDB();
   const { teamName, score, currentQuestion } = req.body || {};
 
   if (teamName && db.activeTeams[teamName]) {
     db.activeTeams[teamName].score = score;
     db.activeTeams[teamName].currentQuestion = currentQuestion;
     db.activeTeams[teamName].lastActive = Date.now();
-    saveDB(db);
+    await saveDB(db);
   }
 
   res.status(200).json({ success: true });

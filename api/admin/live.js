@@ -1,11 +1,11 @@
 import { loadDB, saveDB } from '../_store.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = loadDB();
+  const db = await loadDB();
   const now = Date.now();
 
   // Clean up active teams older than 30 mins
@@ -14,7 +14,7 @@ export default function handler(req, res) {
       delete db.activeTeams[name];
     }
   });
-  saveDB(db);
+  await saveDB(db);
 
   res.status(200).json({
     leaderboard: db.leaderboard,
