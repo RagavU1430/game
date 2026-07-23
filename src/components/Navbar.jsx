@@ -1,4 +1,4 @@
-import { FaHouse, FaStar, FaClock, FaUsers } from 'react-icons/fa6';
+import { FaStar, FaClock, FaUsers } from 'react-icons/fa6';
 import ProgressBar from './ProgressBar';
 
 function formatTime(ms) {
@@ -14,9 +14,6 @@ export default function Navbar({ question, total, score, onHome, elapsed = 0, te
 
   return (
     <header className="game-nav glass">
-      <button className="home-button" onClick={onHome} aria-label="Return to home">
-        <FaHouse />
-      </button>
 
       {teamName && (
         <div className="team-pill">
