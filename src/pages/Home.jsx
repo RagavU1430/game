@@ -48,9 +48,6 @@ export default function Home({ onStart, onOpenAdmin, isCompleted = false }) {
                 Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
               </p>
               <div className="hero-actions" style={{ marginTop: '1.2rem' }}>
-                <Button onClick={() => setRules(true)}>
-                  Start New Game
-                </Button>
                 <Button className="secondary admin-nav-btn" onClick={onOpenAdmin}>
                   <FaUserShield /> Admin Panel
                 </Button>
