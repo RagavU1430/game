@@ -29,28 +29,61 @@ export default function Admin({ onHome, onStartGame }) {
   // Default admin passcode is 'admin123'
   const ADMIN_PIN = 'admin123';
 
-  // Fetch live network data from central server
+  // Fetch live network data from central server and merge with local tab storage
   const syncData = useCallback(async () => {
+    let serverLeaderboard = [];
+    let serverActive = [];
+
     try {
       const res = await fetch('/api/admin/live');
       if (res.ok) {
         const data = await res.json();
-        setLeaderboard(data.leaderboard || []);
-        setActiveTeams(data.activeTeams || []);
-        // Also sync local storage as fallback
-        localStorage.setItem('quiz_leaderboard', JSON.stringify(data.leaderboard || []));
-        localStorage.setItem('quiz_active_teams', JSON.stringify(data.activeTeams || []));
-        return;
+        serverLeaderboard = Array.isArray(data.leaderboard) ? data.leaderboard : [];
+        serverActive = Array.isArray(data.activeTeams) ? data.activeTeams : [];
       }
-    } catch (e) {
-      // Fallback to localStorage if server endpoint unavailable
-      try {
-        const savedLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-        setLeaderboard(savedLeaderboard);
-        const savedActive = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
-        setActiveTeams(savedActive);
-      } catch (err) {}
-    }
+    } catch (e) {}
+
+    try {
+      const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
+      const localActive = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
+
+      // Merge leaderboards
+      const combinedLeaderboard = [...serverLeaderboard];
+      localLeaderboard.forEach(item => {
+        if (!combinedLeaderboard.some(s => s.teamName === item.teamName && s.timestamp === item.timestamp)) {
+          combinedLeaderboard.push(item);
+        }
+      });
+
+      // Merge active teams by teamName
+      const activeMap = new Map();
+      localActive.forEach(t => {
+        if (t && t.teamName) activeMap.set(t.teamName, t);
+      });
+      serverActive.forEach(t => {
+        if (t && t.teamName) {
+          const existing = activeMap.get(t.teamName);
+          if (!existing || (t.lastActive || 0) >= (existing.lastActive || 0)) {
+            activeMap.set(t.teamName, t);
+          }
+        }
+      });
+
+      // Filter out completed teams and stale sessions (> 30 mins)
+      const now = Date.now();
+      const completedNames = new Set(combinedLeaderboard.map(l => l.teamName));
+      const finalActive = Array.from(activeMap.values()).filter(t => {
+        if (completedNames.has(t.teamName)) return false;
+        if (t.lastActive && (now - t.lastActive > 1800000)) return false;
+        return true;
+      });
+
+      setLeaderboard(combinedLeaderboard);
+      setActiveTeams(finalActive);
+
+      localStorage.setItem('quiz_leaderboard', JSON.stringify(combinedLeaderboard));
+      localStorage.setItem('quiz_active_teams', JSON.stringify(finalActive));
+    } catch (err) {}
   }, []);
 
   // Live real-time polling every 1 second

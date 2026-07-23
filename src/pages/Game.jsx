@@ -80,12 +80,29 @@ export default function Game({ onHome, onComplete, teamName }) {
 
     try {
       const active = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
-      const updated = active.map(t => {
-        if (t.teamName === teamName) {
-          return { ...t, score, currentQuestion: index + 1, lastActive: Date.now() };
-        }
-        return t;
-      });
+      const exists = active.some(t => t.teamName === teamName);
+      let updated;
+      if (exists) {
+        updated = active.map(t => {
+          if (t.teamName === teamName) {
+            return { ...t, score, currentQuestion: index + 1, lastActive: Date.now() };
+          }
+          return t;
+        });
+      } else {
+        updated = [
+          {
+            id: 'team_' + Date.now(),
+            teamName,
+            startedAt: Date.now(),
+            lastActive: Date.now(),
+            score,
+            currentQuestion: index + 1,
+            status: 'Playing'
+          },
+          ...active
+        ];
+      }
       localStorage.setItem('quiz_active_teams', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {}

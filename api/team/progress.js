@@ -8,10 +8,22 @@ export default async function handler(req, res) {
   const db = await loadDB();
   const { teamName, score, currentQuestion } = req.body || {};
 
-  if (teamName && db.activeTeams[teamName]) {
-    db.activeTeams[teamName].score = score;
-    db.activeTeams[teamName].currentQuestion = currentQuestion;
-    db.activeTeams[teamName].lastActive = Date.now();
+  if (teamName) {
+    if (!db.activeTeams[teamName]) {
+      db.activeTeams[teamName] = {
+        id: 'team_' + Date.now(),
+        teamName,
+        startedAt: Date.now(),
+        lastActive: Date.now(),
+        score: score || 0,
+        currentQuestion: currentQuestion || 1,
+        status: 'Playing'
+      };
+    } else {
+      db.activeTeams[teamName].score = score;
+      db.activeTeams[teamName].currentQuestion = currentQuestion;
+      db.activeTeams[teamName].lastActive = Date.now();
+    }
     await saveDB(db);
   }
 

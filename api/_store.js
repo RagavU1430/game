@@ -8,7 +8,8 @@ export async function loadDB() {
   // 1. Try Global Cloud DB (for Vercel serverless global sync)
   try {
     const res = await fetch(CLOUD_DB_URL, {
-      headers: { 'Accept': 'application/json' }
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
     });
     if (res.ok) {
       const data = await res.json();
