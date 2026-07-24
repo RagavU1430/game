@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaLeaf, FaHeart, FaTrophy } from 'react-icons/fa6';
+import { FaLeaf, FaHeart } from 'react-icons/fa6';
 import { useState } from 'react';
 import Button from '../components/Button';
 import FloatingBackground from '../components/FloatingBackground';
@@ -7,7 +7,7 @@ import RulesModal from '../components/RulesModal';
 import TeamEntry from '../components/TeamEntry';
 import InteractiveLogo from '../components/InteractiveLogo';
 
-export default function Home({ onStart, isCompleted = false, leaderboardRevealed = false, onOpenLeaderboard }) {
+export default function Home({ onStart, isCompleted = false }) {
   const [rules, setRules] = useState(false);
   const [teamModal, setTeamModal] = useState(false);
 
@@ -47,26 +47,8 @@ export default function Home({ onStart, isCompleted = false, leaderboardRevealed
               <p className="hero-subtitle">
                 Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
               </p>
-              
-              {leaderboardRevealed ? (
-                <div style={{ marginTop: '1.2rem' }}>
-                  <Button onClick={onOpenLeaderboard} className="reveal-banner-btn">
-                    <FaTrophy /> 🎉 View Final Leaderboard
-                  </Button>
-                </div>
-              ) : (
-                <div className="waiting-host-reveal-banner glass" style={{ marginTop: '1.2rem', padding: '0.9rem 1.2rem', borderRadius: '16px', background: 'rgba(254, 243, 199, 0.4)', border: '1px solid rgba(245, 158, 11, 0.3)', textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: 600, color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <span className="pulse-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                    ⏳ Waiting for Host to Reveal Final Leaderboard…
-                  </p>
-                  <small style={{ fontSize: '0.8rem', color: '#78350f', display: 'block', marginTop: '0.2rem' }}>
-                    The event host will reveal the winner podium shortly! Keep this page open.
-                  </small>
-                </div>
-              )}
 
-              <div className="thankyou-badge-row" style={{ marginTop: '1.2rem' }}>
+              <div className="thankyou-badge-row" style={{ marginTop: '1.5rem' }}>
                 <span className="club-tag">AI Frontier Club</span>
                 <span className="dept-tag">Department of AI & DS</span>
               </div>

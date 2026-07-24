@@ -1,11 +1,10 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FaLeaf, FaTrophy } from 'react-icons/fa6';
+import { FaLeaf } from 'react-icons/fa6';
 import Home from './pages/Home';
 import Game from './pages/Game';
 import TeamEntry from './components/TeamEntry';
-import CelebrationLeaderboardModal from './components/CelebrationLeaderboardModal';
 import './styles.css';
 
 const Result = lazy(() => import('./pages/Result'));
@@ -43,11 +42,6 @@ function App() {
   const [run, setRun] = useState(0);
   const [showTeamModalFromAdmin, setShowTeamModalFromAdmin] = useState(false);
 
-  // Leaderboard Reveal & Celebration Modal state
-  const [leaderboardRevealed, setLeaderboardRevealed] = useState(false);
-  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
-  const [hasAutoOpenedCelebration, setHasAutoOpenedCelebration] = useState(false);
-
   const setView = (newView) => {
     setViewInternal(newView);
     sessionStorage.setItem('quiz_current_view', newView);
@@ -64,59 +58,6 @@ function App() {
       })
       .catch((e) => { console.error('[App] Questions count fetch error:', e.message); });
   }, []);
-
-  // Poll for Quiz Status & Leaderboard Reveal State across network
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch('/api/status');
-        if (res.ok) {
-          const data = await res.json();
-          if (typeof data.leaderboardRevealed === 'boolean') {
-            setLeaderboardRevealed(data.leaderboardRevealed);
-            
-            // Auto open celebration pop-up modal ONLY at the end of the quiz IF there are completed teams
-            const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
-            const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-            const hasCompletedTeams = Array.isArray(localLeaderboard) && localLeaderboard.length > 0;
-
-            if (data.leaderboardRevealed && isAtEnd && hasCompletedTeams) {
-              if (!hasAutoOpenedCelebration) {
-                setShowCelebrationModal(true);
-                setHasAutoOpenedCelebration(true);
-              }
-            } else if (!data.leaderboardRevealed) {
-              setHasAutoOpenedCelebration(false);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('[App] Status check error:', e.message);
-      }
-    };
-
-    checkStatus();
-    const intervalId = setInterval(checkStatus, 3000);
-    const handleStorage = () => checkStatus();
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, [view, isCompleted, hasAutoOpenedCelebration]);
-
-  // Auto trigger modal when player finishes game if host already revealed leaderboard
-  useEffect(() => {
-    const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
-    const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-    const hasCompletedTeams = Array.isArray(localLeaderboard) && localLeaderboard.length > 0;
-
-    if (leaderboardRevealed && isAtEnd && hasCompletedTeams && !hasAutoOpenedCelebration) {
-      setShowCelebrationModal(true);
-      setHasAutoOpenedCelebration(true);
-    }
-  }, [view, isCompleted, leaderboardRevealed, hasAutoOpenedCelebration]);
 
   const begin = (name) => {
     const selectedTeam = name || teamName || 'Anonymous Team';
@@ -243,8 +184,6 @@ function App() {
             <Home
               onStart={(name) => begin(name)}
               isCompleted={isCompleted}
-              leaderboardRevealed={leaderboardRevealed}
-              onOpenLeaderboard={() => setShowCelebrationModal(true)}
             />
           </motion.div>
         )}
@@ -266,8 +205,6 @@ function App() {
                 teamName={teamName}
                 totalQuestions={totalQuestions}
                 onAutoReturnHome={handleAutoReturnHome}
-                leaderboardRevealed={leaderboardRevealed}
-                onOpenLeaderboard={() => setShowCelebrationModal(true)}
               />
             </Suspense>
           </motion.div>
@@ -283,30 +220,6 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Floating Leaderboard Button — ONLY at the end when host has revealed */}
-      {leaderboardRevealed && (view === 'result' || (view === 'home' && isCompleted)) && (
-        <motion.button
-          className="floating-leaderboard-trigger glass"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowCelebrationModal(true)}
-          title="View Final Event Leaderboard"
-        >
-          <FaTrophy className="trophy-pulse-icon" />
-          <span>🎉 View Final Leaderboard</span>
-        </motion.button>
-      )}
-
-      {/* Global Party Celebration Modal */}
-      <CelebrationLeaderboardModal
-        open={showCelebrationModal}
-        onClose={() => setShowCelebrationModal(false)}
-        myTeamName={teamName}
-        totalQuestions={totalQuestions}
-      />
 
       <TeamEntry
         open={showTeamModalFromAdmin}
