@@ -1,8 +1,10 @@
 {
   "rewrites": [
+    { "source": "/api/questions", "destination": "/api/admin/questions" },
     { "source": "/api/admin/reveal", "destination": "/api/admin/status" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
+
 
 

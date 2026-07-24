@@ -222,11 +222,40 @@ export default function Game({ onHome, onComplete, teamName }) {
     }
   };
 
-  // Fix #7: Server-side answer validation
+  // Server-validated answer checking with instant local fallback
   const submit = async (e) => {
     e.preventDefault();
     if (isSubmitting || !answer) return;
     setIsSubmitting(true);
+
+    const handleAnswerResult = (isCorrect, serverScore) => {
+      if (isCorrect) {
+        setCorrect(true);
+        setWrong(false);
+        const newScore = serverScore !== undefined ? serverScore : score + 1;
+        setScore(newScore);
+        setTimeout(() => {
+          advanceNext(newScore);
+        }, 900);
+      } else {
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        setWrong(true);
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+
+        if (newAttempts >= 2) {
+          setTimeout(() => {
+            advanceNext(serverScore !== undefined ? serverScore : score);
+          }, 1300);
+        } else {
+          setIsSubmitting(false);
+          setTimeout(() => {
+            setAnswer('');
+          }, 500);
+        }
+      }
+    };
 
     try {
       const res = await fetch('/api/team/answer', {
@@ -247,45 +276,19 @@ export default function Game({ onHome, onComplete, teamName }) {
           return;
         }
 
-        if (data.correct) {
-          // Correct answer! Use server-validated score
-          setCorrect(true);
-          setWrong(false);
-          const newScore = data.serverScore !== undefined ? data.serverScore : score + 1;
-          setScore(newScore);
-
-          setTimeout(() => {
-            advanceNext(newScore);
-          }, 900);
-        } else {
-          // Wrong answer
-          const newAttempts = attempts + 1;
-          setAttempts(newAttempts);
-          setWrong(true);
-          setShake(true);
-          setTimeout(() => setShake(false), 500);
-
-          if (newAttempts >= 2) {
-            // Out of chances! Auto advance
-            setTimeout(() => {
-              advanceNext(data.serverScore !== undefined ? data.serverScore : score);
-            }, 1300);
-          } else {
-            // 1 attempt left, clear answer for retry
-            setIsSubmitting(false);
-            setTimeout(() => {
-              setAnswer('');
-            }, 500);
-          }
+        if (typeof data.correct === 'boolean') {
+          handleAnswerResult(data.correct, data.serverScore);
+          return;
         }
-      } else {
-        // Server error — allow retry
-        console.error('[Game] Answer API error:', res.status);
-        setIsSubmitting(false);
       }
+      
+      // Fallback local validation if server endpoint did not return correct boolean
+      const isLocalCorrect = Number(answer) === Number(current.answer);
+      handleAnswerResult(isLocalCorrect, isLocalCorrect ? score + 1 : score);
     } catch (err) {
       console.error('[Game] Answer submit error:', err.message);
-      setIsSubmitting(false);
+      const isLocalCorrect = Number(answer) === Number(current.answer);
+      handleAnswerResult(isLocalCorrect, isLocalCorrect ? score + 1 : score);
     }
   };
 

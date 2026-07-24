@@ -17,8 +17,21 @@ export default async function handler(req, res) {
   const db = await loadDB();
 
   if (req.method === 'GET') {
-    // Admin gets questions WITH answers
-    return res.status(200).json({ questions: db.questions || DEFAULT_QUESTIONS });
+    // Validate admin token
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.replace('Bearer ', '').trim();
+    const isAdmin = token && verifyToken(token);
+
+    const rawQuestions = (Array.isArray(db.questions) && db.questions.length > 0) ? db.questions : DEFAULT_QUESTIONS;
+
+    if (isAdmin) {
+      // Admin gets questions WITH answers
+      return res.status(200).json({ questions: rawQuestions });
+    }
+
+    // Public request gets client-safe questions WITHOUT answers
+    const clientSafeQuestions = rawQuestions.map(({ answer, ...rest }) => rest);
+    return res.status(200).json({ questions: clientSafeQuestions });
   }
 
   if (req.method === 'POST') {

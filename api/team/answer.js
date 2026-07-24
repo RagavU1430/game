@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  const db = await loadDB();
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch (e) {}
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
 
   const { teamName, questionId, answer } = body;
 
-  if (!teamName || !questionId || answer === undefined) {
+  if (!teamName || questionId === undefined || answer === undefined) {
     return res.status(400).json({ success: false, error: 'Missing fields' });
   }
 
@@ -36,25 +37,31 @@ export default async function handler(req, res) {
 
   const teamData = db.teamAnswers[teamName];
 
-  // Prevent re-answering same question
-  if (teamData.answeredQuestions.includes(questionId)) {
-    return res.status(200).json({ success: false, error: 'Already answered', correct: false });
+  // Prevent re-answering same question (compare as strings/numbers safely)
+  const hasAlreadyAnswered = teamData.answeredQuestions.some(qId => String(qId) === String(questionId));
+  if (hasAlreadyAnswered) {
+    return res.status(200).json({
+      success: true,
+      correct: false,
+      alreadyAnswered: true,
+      serverScore: teamData.serverScore
+    });
   }
 
-  // Find the question and validate answer
-  const question = (db.questions || []).find(q => q.id === questionId);
+  // Find the question and validate answer (type-safe comparison)
+  const question = (db.questions || []).find(q => String(q.id) === String(questionId));
   if (!question) {
-    return res.status(200).json({ success: false, error: 'Invalid question' });
+    return res.status(400).json({ success: false, error: 'Invalid question ID' });
   }
 
-  const isCorrect = Number(answer) === question.answer;
-  teamData.answeredQuestions.push(questionId);
+  const isCorrect = Number(answer) === Number(question.answer);
+  teamData.answeredQuestions.push(question.id);
   if (isCorrect) {
     teamData.serverScore += 1;
   }
 
   // Update active team score
-  if (db.activeTeams[teamName]) {
+  if (db.activeTeams && db.activeTeams[teamName]) {
     db.activeTeams[teamName].score = teamData.serverScore;
   }
 
