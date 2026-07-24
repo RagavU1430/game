@@ -75,10 +75,13 @@ function App() {
           if (typeof data.leaderboardRevealed === 'boolean') {
             setLeaderboardRevealed(data.leaderboardRevealed);
             
-            // Auto open celebration pop-up modal when admin reveals leaderboard
-            if (data.leaderboardRevealed && !hasAutoOpenedCelebration) {
-              setShowCelebrationModal(true);
-              setHasAutoOpenedCelebration(true);
+            if (data.leaderboardRevealed) {
+              if (!hasAutoOpenedCelebration) {
+                setShowCelebrationModal(true);
+                setHasAutoOpenedCelebration(true);
+              }
+            } else {
+              setHasAutoOpenedCelebration(false);
             }
           }
         }

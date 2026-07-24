@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const CLOUD_DB_URL = process.env.CLOUD_DB_URL || 'https://jsonblob.com/api/jsonBlob/019f8e6f-7446-7118-b999-df38f0083c8a';
+const CLOUD_DB_URL = process.env.CLOUD_DB_URL || 'https://jsonblob.com/api/jsonBlob/019f94ba-573a-79d6-a9c4-0b9cf7068cc3';
 const DB_FILE = process.env.VERCEL ? '/tmp/leaderboard_db.json' : path.resolve(process.cwd(), 'leaderboard_db.json');
 
 export const DEFAULT_QUESTIONS = [

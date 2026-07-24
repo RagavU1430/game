@@ -24,7 +24,13 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { status, revealed } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) {}
+    }
+    body = body || {};
+
+    const { status, revealed } = body;
     if (status === 'active' || status === 'paused') {
       db.quizStatus = status;
     }
