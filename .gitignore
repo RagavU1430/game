@@ -24,3 +24,6 @@ leaderboard_db.json
 *.sw?
 .vscode/
 .idea/
+
+.vercel
+.env*

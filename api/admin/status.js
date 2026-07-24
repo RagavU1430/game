@@ -17,16 +17,26 @@ export default async function handler(req, res) {
   const db = await loadDB();
 
   if (req.method === 'GET') {
-    return res.status(200).json({ status: db.quizStatus || 'active' });
+    return res.status(200).json({
+      status: db.quizStatus || 'active',
+      leaderboardRevealed: !!db.leaderboardRevealed
+    });
   }
 
   if (req.method === 'POST') {
-    const { status } = req.body || {};
+    const { status, revealed } = req.body || {};
     if (status === 'active' || status === 'paused') {
       db.quizStatus = status;
-      await saveDB(db);
     }
-    return res.status(200).json({ success: true, status: db.quizStatus });
+    if (typeof revealed === 'boolean') {
+      db.leaderboardRevealed = revealed;
+    }
+    await saveDB(db);
+    return res.status(200).json({
+      success: true,
+      status: db.quizStatus,
+      leaderboardRevealed: db.leaderboardRevealed
+    });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

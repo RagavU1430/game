@@ -1,6 +1,8 @@
 {
   "rewrites": [
+    { "source": "/api/admin/reveal", "destination": "/api/admin/status" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
+
 
