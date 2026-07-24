@@ -25,12 +25,13 @@ export default async function handler(req, res) {
   });
   await saveDB(db);
 
-  // Return full data including questions, status, kickedTeams (fix #12)
+  // Return full data including questions, status, leaderboardRevealed, kickedTeams
   res.status(200).json({
     leaderboard: db.leaderboard,
     activeTeams: Object.values(db.activeTeams),
     questions: db.questions || DEFAULT_QUESTIONS,
     quizStatus: db.quizStatus || 'active',
+    leaderboardRevealed: !!db.leaderboardRevealed,
     kickedTeams: db.kickedTeams || []
   });
 }

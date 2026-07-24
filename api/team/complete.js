@@ -7,8 +7,13 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = await loadDB();
-  const { teamName, score, time } = req.body || {};
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch (e) {}
+  }
+  body = body || {};
+
+  const { teamName, score, time } = body;
 
   if (teamName) {
     // Check for duplicate submission (fix #8)

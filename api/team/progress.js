@@ -7,8 +7,13 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = await loadDB();
-  const { teamName, score, currentQuestion } = req.body || {};
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch (e) {}
+  }
+  body = body || {};
+
+  const { teamName, score, currentQuestion } = body;
 
   if (teamName) {
     const isKicked = Array.isArray(db.kickedTeams) && db.kickedTeams.some(entry => {

@@ -124,7 +124,7 @@ export async function saveDB(data) {
 
   // 1. Save to Global Cloud DB across Vercel
   try {
-    await fetch(CLOUD_DB_URL, {
+    const res = await fetch(CLOUD_DB_URL, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -132,6 +132,9 @@ export async function saveDB(data) {
       },
       body: JSON.stringify(payload)
     });
+    if (!res.ok) {
+      console.error('[DB] Cloud save HTTP status error:', res.status);
+    }
   } catch (e) { console.error('[DB] Cloud save error:', e.message); }
 
   // 2. Save to Local File
