@@ -9,6 +9,13 @@ export default async function handler(req, res) {
   const { teamName, score, currentQuestion } = req.body || {};
 
   if (teamName) {
+    const kicked = Array.isArray(db.kickedTeams) && db.kickedTeams.includes(teamName);
+    if (kicked) {
+      delete db.activeTeams[teamName];
+      await saveDB(db);
+      return res.status(200).json({ success: false, kicked: true });
+    }
+
     if (!db.activeTeams[teamName]) {
       db.activeTeams[teamName] = {
         id: 'team_' + Date.now(),

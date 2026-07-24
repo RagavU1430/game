@@ -30,11 +30,12 @@ function loadDB() {
         leaderboard: Array.isArray(parsed.leaderboard) ? parsed.leaderboard : [],
         activeTeams: (parsed.activeTeams && typeof parsed.activeTeams === 'object') ? parsed.activeTeams : {},
         questions: (Array.isArray(parsed.questions) && parsed.questions.length > 0) ? parsed.questions : DEFAULT_QUESTIONS,
-        quizStatus: parsed.quizStatus || 'active'
+        quizStatus: parsed.quizStatus || 'active',
+        kickedTeams: Array.isArray(parsed.kickedTeams) ? parsed.kickedTeams : []
       };
     }
   } catch (e) {}
-  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active' };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [] };
 }
 
 function saveDB(data) {
@@ -72,6 +73,10 @@ function liveQuizApiPlugin() {
             if (url === '/api/team/login') {
               const { teamName } = body;
               if (teamName) {
+                // If team was previously kicked, clear kick status upon fresh login
+                if (!Array.isArray(db.kickedTeams)) db.kickedTeams = [];
+                db.kickedTeams = db.kickedTeams.filter(t => t !== teamName);
+
                 db.activeTeams[teamName] = {
                   id: 'team_' + Date.now(),
                   teamName,
@@ -90,11 +95,21 @@ function liveQuizApiPlugin() {
             // 2. Team Question Progress
             if (url === '/api/team/progress') {
               const { teamName, score, currentQuestion } = body;
-              if (teamName && db.activeTeams[teamName]) {
-                db.activeTeams[teamName].score = score;
-                db.activeTeams[teamName].currentQuestion = currentQuestion;
-                db.activeTeams[teamName].lastActive = Date.now();
-                saveDB(db);
+              if (teamName) {
+                const isKicked = Array.isArray(db.kickedTeams) && db.kickedTeams.includes(teamName);
+                if (isKicked) {
+                  delete db.activeTeams[teamName];
+                  saveDB(db);
+                  res.end(JSON.stringify({ success: false, kicked: true }));
+                  return;
+                }
+
+                if (db.activeTeams[teamName]) {
+                  db.activeTeams[teamName].score = score;
+                  db.activeTeams[teamName].currentQuestion = currentQuestion;
+                  db.activeTeams[teamName].lastActive = Date.now();
+                  saveDB(db);
+                }
               }
               res.end(JSON.stringify({ success: true }));
               return;
@@ -134,7 +149,8 @@ function liveQuizApiPlugin() {
                 leaderboard: db.leaderboard,
                 activeTeams: Object.values(db.activeTeams),
                 questions: db.questions,
-                quizStatus: db.quizStatus || 'active'
+                quizStatus: db.quizStatus || 'active',
+                kickedTeams: db.kickedTeams || []
               }));
               return;
             }
@@ -143,6 +159,7 @@ function liveQuizApiPlugin() {
             if (url === '/api/admin/clear') {
               db.leaderboard = [];
               db.activeTeams = {};
+              db.kickedTeams = [];
               saveDB(db);
               res.end(JSON.stringify({ success: true }));
               return;
@@ -156,9 +173,13 @@ function liveQuizApiPlugin() {
               }
               if (teamName) {
                 delete db.activeTeams[teamName];
+                if (!Array.isArray(db.kickedTeams)) db.kickedTeams = [];
+                if (!db.kickedTeams.includes(teamName)) {
+                  db.kickedTeams.push(teamName);
+                }
               }
               saveDB(db);
-              res.end(JSON.stringify({ success: true }));
+              res.end(JSON.stringify({ success: true, kickedTeams: db.kickedTeams }));
               return;
             }
 

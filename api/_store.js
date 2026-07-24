@@ -31,7 +31,8 @@ export async function loadDB() {
           leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
           activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
           questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
-          quizStatus: data.quizStatus || 'active'
+          quizStatus: data.quizStatus || 'active',
+          kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
         };
       }
     }
@@ -45,12 +46,13 @@ export async function loadDB() {
         leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
         activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
         questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
-        quizStatus: data.quizStatus || 'active'
+        quizStatus: data.quizStatus || 'active',
+        kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
       };
     }
   } catch (e) {}
 
-  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active' };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [] };
 }
 
 export async function saveDB(data) {
@@ -58,7 +60,8 @@ export async function saveDB(data) {
     leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
     activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
     questions: Array.isArray(data.questions) ? data.questions : DEFAULT_QUESTIONS,
-    quizStatus: data.quizStatus || 'active'
+    quizStatus: data.quizStatus || 'active',
+    kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
   };
 
   // 1. Save to Global Cloud DB across Vercel

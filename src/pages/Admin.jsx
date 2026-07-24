@@ -185,6 +185,10 @@ export default function Admin({ onHome, onStartGame }) {
   };
 
   const handleDeleteActiveTeam = async (teamNameToDelete) => {
+    if (!window.confirm(`Are you sure you want to kick team "${teamNameToDelete}" out of the live game?`)) {
+      return;
+    }
+
     try {
       await fetch('/api/admin/delete-entry', {
         method: 'POST',
@@ -192,6 +196,12 @@ export default function Admin({ onHome, onStartGame }) {
         body: JSON.stringify({ teamName: teamNameToDelete })
       });
     } catch (e) {}
+
+    const currentKicked = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+    if (!currentKicked.includes(teamNameToDelete)) {
+      currentKicked.push(teamNameToDelete);
+      localStorage.setItem('quiz_kicked_teams', JSON.stringify(currentKicked));
+    }
 
     const updated = activeTeams.filter(t => t.teamName !== teamNameToDelete);
     setActiveTeams(updated);

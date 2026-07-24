@@ -151,41 +151,58 @@ export default function Game({ onHome, onComplete, teamName }) {
   // Live active team progress sync to central server API across network
   useEffect(() => {
     if (!teamName) return;
+
+    // Check if team is already marked as kicked locally
+    const kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+    if (kickedList.includes(teamName)) {
+      localStorage.removeItem('quiz_game_index');
+      localStorage.removeItem('quiz_game_score');
+      localStorage.removeItem('quiz_game_start_time');
+      sessionStorage.removeItem('quiz_current_team');
+      sessionStorage.removeItem('quiz_current_view');
+      onHome();
+      return;
+    }
+
     fetch('/api/team/progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teamName, score, currentQuestion: index + 1 })
-    }).catch(() => {});
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.kicked) {
+          // Kicked by Admin on central server!
+          const currentKicked = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+          if (!currentKicked.includes(teamName)) {
+            currentKicked.push(teamName);
+            localStorage.setItem('quiz_kicked_teams', JSON.stringify(currentKicked));
+          }
+          localStorage.removeItem('quiz_game_index');
+          localStorage.removeItem('quiz_game_score');
+          localStorage.removeItem('quiz_game_start_time');
+          sessionStorage.removeItem('quiz_current_team');
+          sessionStorage.removeItem('quiz_current_view');
+          onHome();
+        }
+      })
+      .catch(() => {});
 
     try {
       const active = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
       const exists = active.some(t => t.teamName === teamName);
-      let updated;
       if (exists) {
-        updated = active.map(t => {
+        const updated = active.map(t => {
           if (t.teamName === teamName) {
             return { ...t, score, currentQuestion: index + 1, lastActive: Date.now() };
           }
           return t;
         });
-      } else {
-        updated = [
-          {
-            id: 'team_' + Date.now(),
-            teamName,
-            startedAt: Date.now(),
-            lastActive: Date.now(),
-            score,
-            currentQuestion: index + 1,
-            status: 'Playing'
-          },
-          ...active
-        ];
+        localStorage.setItem('quiz_active_teams', JSON.stringify(updated));
+        window.dispatchEvent(new Event('storage'));
       }
-      localStorage.setItem('quiz_active_teams', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
     } catch (e) {}
-  }, [index, score, teamName]);
+  }, [index, score, teamName, onHome]);
 
   const stopTimer = () => {
     if (rafRef.current) {

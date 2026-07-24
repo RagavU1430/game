@@ -13,8 +13,12 @@ export default async function handler(req, res) {
   }
   if (teamName) {
     delete db.activeTeams[teamName];
+    if (!Array.isArray(db.kickedTeams)) db.kickedTeams = [];
+    if (!db.kickedTeams.includes(teamName)) {
+      db.kickedTeams.push(teamName);
+    }
   }
   await saveDB(db);
 
-  res.status(200).json({ success: true });
+  res.status(200).json({ success: true, kickedTeams: db.kickedTeams });
 }
