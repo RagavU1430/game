@@ -386,16 +386,6 @@ export default function Admin({ onHome, onStartGame }) {
     });
   };
 
-  const handleToggleLeaderboardReveal = async (newRevealed) => {
-    setLeaderboardRevealed(newRevealed);
-    localStorage.setItem('quiz_leaderboard_revealed', String(newRevealed));
-    window.dispatchEvent(new Event('storage'));
-    await adminFetch('/api/admin/reveal', {
-      method: 'POST',
-      body: JSON.stringify({ revealed: newRevealed })
-    });
-  };
-
   // Sort and filter leaderboard
   const processedLeaderboard = [...leaderboard]
     .filter(item => item.teamName.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -472,12 +462,6 @@ export default function Admin({ onHome, onStartGame }) {
             <h1>Admin Dashboard & Control Center</h1>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <Button
-              className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
-              onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
-            >
-              <FaTrophy /> {leaderboardRevealed ? '🎉 Leaderboard Revealed' : '🎉 Reveal Leaderboard to Everyone'}
-            </Button>
             <Button onClick={onStartGame}>
               <FaPlay /> Launch Quiz Round
             </Button>
@@ -512,22 +496,6 @@ export default function Admin({ onHome, onStartGame }) {
         {/* TAB 1: MONITOR & LEADERBOARD */}
         {activeTab === 'monitor' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {/* Top Prominent Callout Banner for Leaderboard Reveal */}
-            <div className={`reveal-callout-banner glass ${leaderboardRevealed ? 'revealed-banner' : 'unrevealed-banner'}`}>
-              <div className="reveal-banner-info">
-                <span className="banner-party-icon">{leaderboardRevealed ? '✨' : '🎉'}</span>
-                <div>
-                  <strong>{leaderboardRevealed ? 'Leaderboard is LIVE & REVEALED to all players!' : 'All players finished? Reveal the leaderboard to everyone!'}</strong>
-                  <p>{leaderboardRevealed ? 'Celebration pop-up with confetti & podium is active on all player screens.' : 'Triggers party confetti animation and top podium rankings on all player devices.'}</p>
-                </div>
-              </div>
-              <Button
-                className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
-                onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
-              >
-                <FaTrophy /> {leaderboardRevealed ? '🎉 Hide Leaderboard' : '🎉 REVEAL LEADERBOARD TO EVERYONE'}
-              </Button>
-            </div>
 
             {/* Stats Summary Cards */}
             <div className="admin-stats-grid">
@@ -608,12 +576,6 @@ export default function Admin({ onHome, onStartGame }) {
               </div>
 
               <div className="action-buttons">
-                <Button
-                  onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
-                  className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
-                >
-                  {leaderboardRevealed ? '🎉 Leaderboard Revealed (Click to Hide)' : '🎉 Reveal Leaderboard to Everyone'}
-                </Button>
                 <Button onClick={handleExportCSV} disabled={leaderboard.length === 0} className="export-btn">
                   <FaDownload /> Export CSV
                 </Button>
