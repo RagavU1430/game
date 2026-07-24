@@ -10,6 +10,6 @@ export default async function handler(req, res) {
   const db = await loadDB();
   res.status(200).json({
     revealed: !!db.leaderboardRevealed,
-    leaderboard: db.leaderboardRevealed ? (db.leaderboard || []) : []
+    leaderboard: db.leaderboard || []
   });
 }

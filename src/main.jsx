@@ -175,31 +175,33 @@ function App() {
 
     const currentTeam = teamName || 'Anonymous Team';
 
-    // Call Central Server API to mark quiz complete across network
-    fetch('/api/team/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamName: currentTeam, score: finalScore, time: finalTime })
-    }).catch((e) => { console.error('[App] Complete error:', e.message); });
-
-    // Fallback local storage update
+    // 1. Immediately update local storage so completed team is NEVER lost locally
     try {
       const existing = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
-      existing.push({
+      const filtered = existing.filter(t => t.teamName.toLowerCase() !== currentTeam.toLowerCase());
+      filtered.push({
+        id: 'lb_' + Date.now(),
         teamName: currentTeam,
         score: finalScore,
         time: finalTime,
         timestamp: Date.now(),
         status: 'Completed'
       });
-      localStorage.setItem('quiz_leaderboard', JSON.stringify(existing));
+      localStorage.setItem('quiz_leaderboard', JSON.stringify(filtered));
 
       const active = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
-      const remainingActive = active.filter(t => t.teamName !== currentTeam);
+      const remainingActive = active.filter(t => t.teamName.toLowerCase() !== currentTeam.toLowerCase());
       localStorage.setItem('quiz_active_teams', JSON.stringify(remainingActive));
 
       window.dispatchEvent(new Event('storage'));
-    } catch (e) { console.error('[App] Leaderboard update error:', e.message); }
+    } catch (e) { console.error('[App] Leaderboard local update error:', e.message); }
+
+    // 2. Call Central Server API to register completed team on cloud DB
+    fetch('/api/team/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamName: currentTeam, score: finalScore, time: finalTime })
+    }).catch((e) => { console.error('[App] Complete error:', e.message); });
 
     setView('result');
   };

@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  const db = await loadDB();
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch (e) {}
@@ -16,23 +17,22 @@ export default async function handler(req, res) {
   const { teamName, score, time } = body;
 
   if (teamName) {
-    // Check for duplicate submission (fix #8)
-    const alreadyCompleted = db.leaderboard.some(entry => entry.teamName === teamName);
-    if (alreadyCompleted) {
+    // Check if team already exists in leaderboard
+    const existingIndex = (db.leaderboard || []).findIndex(entry => entry.teamName.toLowerCase() === teamName.toLowerCase());
+
+    // Use server-tracked score if available, fallback to client score
+    const serverData = db.teamAnswers && db.teamAnswers[teamName];
+    const validatedScore = (serverData && typeof serverData.serverScore === 'number') 
+      ? serverData.serverScore 
+      : (typeof score === 'number' ? score : 0);
+
+    const validatedTime = (typeof time === 'number' && time >= 0) ? time : 0;
+
+    if (db.activeTeams && db.activeTeams[teamName]) {
       delete db.activeTeams[teamName];
-      await saveDB(db);
-      return res.status(200).json({ success: false, error: 'Team already submitted results' });
     }
 
-    // Use server-tracked score, not client-provided (fix #9)
-    const serverData = db.teamAnswers && db.teamAnswers[teamName];
-    const validatedScore = serverData ? serverData.serverScore : 0;
-
-    // Validate time (must be positive and < 2 hours)
-    const validatedTime = (typeof time === 'number' && time > 0 && time < 7200000) ? time : 0;
-
-    delete db.activeTeams[teamName];
-    const newEntry = {
+    const entryToSave = {
       id: 'lb_' + Date.now(),
       teamName,
       score: validatedScore,
@@ -40,7 +40,14 @@ export default async function handler(req, res) {
       timestamp: Date.now(),
       status: 'Completed'
     };
-    db.leaderboard.push(newEntry);
+
+    if (!Array.isArray(db.leaderboard)) db.leaderboard = [];
+
+    if (existingIndex >= 0) {
+      db.leaderboard[existingIndex] = entryToSave;
+    } else {
+      db.leaderboard.push(entryToSave);
+    }
 
     // Clean up team answers tracking
     if (db.teamAnswers && db.teamAnswers[teamName]) {
