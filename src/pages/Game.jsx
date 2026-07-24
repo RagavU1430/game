@@ -127,8 +127,9 @@ export default function Game({ onHome, onComplete, teamName }) {
 
   useEffect(() => {
     let savedStart = Number(localStorage.getItem('quiz_game_start_time'));
-    if (!savedStart) {
-      savedStart = Date.now();
+    const now = Date.now();
+    if (!savedStart || savedStart > now || (now - savedStart > 7200000)) {
+      savedStart = now;
       localStorage.setItem('quiz_game_start_time', String(savedStart));
     }
     startTimeRef.current = savedStart;

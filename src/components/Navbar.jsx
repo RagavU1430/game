@@ -2,6 +2,7 @@ import { FaStar, FaClock, FaUsers } from 'react-icons/fa6';
 import ProgressBar from './ProgressBar';
 
 function formatTime(ms) {
+  if (!ms || ms < 0 || isNaN(ms)) return '00:00:00';
   const totalSeconds = Math.floor(ms / 1000);
   const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const secs = (totalSeconds % 60).toString().padStart(2, '0');

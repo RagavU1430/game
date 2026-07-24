@@ -54,6 +54,11 @@ function App() {
     sessionStorage.setItem('quiz_current_time', '0');
     setIsCompleted(false);
     sessionStorage.setItem('quiz_completed_device', 'false');
+    
+    // Fresh timer & progress initialization for new game session
+    localStorage.setItem('quiz_game_start_time', String(Date.now()));
+    localStorage.setItem('quiz_game_index', '0');
+    localStorage.setItem('quiz_game_score', '0');
     setRun((x) => x + 1);
 
     // Call Central Server API to register Team Login across network
