@@ -9,13 +9,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_FILE = path.resolve(__dirname, 'leaderboard_db.json');
 
+const DEFAULT_QUESTIONS = [
+  {"id": 1, "image": "/images/q1.jpeg", "answer": 6, "title": "Beach Day", "hint": "Look at the sand castle, beach ball, and umbrella"},
+  {"id": 2, "image": "/images/q2.jpeg", "answer": 3, "title": "Horse Racing", "hint": "Check the jockey's gear and the horse's features"},
+  {"id": 3, "image": "/images/q3.jpeg", "answer": 3, "title": "Vegetables", "hint": "Compare the mushrooms, potatoes, and carrots"},
+  {"id": 4, "image": "/images/q4.jpeg", "answer": 5, "title": "Art Class", "hint": "Look at the crayons, paint palette, and shapes"},
+  {"id": 5, "image": "/images/q5.jpeg", "answer": 5, "title": "Zoo Visit", "hint": "Check the animals, children, and fence area"},
+  {"id": 6, "image": "/images/q6.jpeg", "answer": 6, "title": "Construction", "hint": "Look at the workers, tools, and steel beams"},
+  {"id": 7, "image": "/images/q7.jpeg", "answer": 5, "title": "Carnival Fun", "hint": "Check the ferris wheel, tent, and ticket booth"},
+  {"id": 8, "image": "/images/q8.jpeg", "answer": 5, "title": "School Bus", "hint": "Look at the birds, bus number, and children"},
+  {"id": 9, "image": "/images/q9.jpeg", "answer": 5, "title": "Baseball", "hint": "Check the trees, ball, and boy's clothes"},
+  {"id": 10, "image": "/images/q10.jpeg", "answer": 3, "title": "Forest Picnic", "hint": "Look at the fruit, cup, and sky"}
+];
+
 function loadDB() {
   try {
     if (fs.existsSync(DB_FILE)) {
-      return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      const parsed = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      return {
+        leaderboard: Array.isArray(parsed.leaderboard) ? parsed.leaderboard : [],
+        activeTeams: (parsed.activeTeams && typeof parsed.activeTeams === 'object') ? parsed.activeTeams : {},
+        questions: (Array.isArray(parsed.questions) && parsed.questions.length > 0) ? parsed.questions : DEFAULT_QUESTIONS,
+        quizStatus: parsed.quizStatus || 'active'
+      };
     }
   } catch (e) {}
-  return { leaderboard: [], activeTeams: {} };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active' };
 }
 
 function saveDB(data) {
@@ -113,7 +132,9 @@ function liveQuizApiPlugin() {
 
               res.end(JSON.stringify({
                 leaderboard: db.leaderboard,
-                activeTeams: Object.values(db.activeTeams)
+                activeTeams: Object.values(db.activeTeams),
+                questions: db.questions,
+                quizStatus: db.quizStatus || 'active'
               }));
               return;
             }
@@ -138,6 +159,45 @@ function liveQuizApiPlugin() {
               }
               saveDB(db);
               res.end(JSON.stringify({ success: true }));
+              return;
+            }
+
+            // 7. Admin Questions Bank Endpoint
+            if (url === '/api/admin/questions') {
+              if (req.method === 'GET') {
+                res.end(JSON.stringify({ questions: db.questions }));
+                return;
+              }
+              const { action, question, questions, id } = body;
+              if (action === 'reset') {
+                db.questions = [...DEFAULT_QUESTIONS];
+              } else if (action === 'set' && Array.isArray(questions)) {
+                db.questions = questions;
+              } else if (action === 'add' && question) {
+                const nextId = db.questions.length > 0 ? Math.max(...db.questions.map(q => q.id)) + 1 : 1;
+                db.questions.push({ ...question, id: nextId });
+              } else if (action === 'update' && question && question.id) {
+                db.questions = db.questions.map(q => q.id === question.id ? { ...q, ...question } : q);
+              } else if (action === 'delete' && id) {
+                db.questions = db.questions.filter(q => q.id !== id);
+              }
+              saveDB(db);
+              res.end(JSON.stringify({ success: true, questions: db.questions }));
+              return;
+            }
+
+            // 8. Admin Quiz Status Endpoint
+            if (url === '/api/admin/status') {
+              if (req.method === 'GET') {
+                res.end(JSON.stringify({ status: db.quizStatus || 'active' }));
+                return;
+              }
+              const { status } = body;
+              if (status === 'active' || status === 'paused') {
+                db.quizStatus = status;
+                saveDB(db);
+              }
+              res.end(JSON.stringify({ success: true, status: db.quizStatus }));
               return;
             }
 
