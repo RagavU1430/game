@@ -36,6 +36,9 @@ export default function Admin({ onHome, onStartGame }) {
   const [activeTeams, setActiveTeams] = useState([]);
   const [questionsBank, setQuestionsBank] = useState([]);
   const [quizStatus, setQuizStatus] = useState('active');
+  const [leaderboardRevealed, setLeaderboardRevealed] = useState(() => {
+    return localStorage.getItem('quiz_leaderboard_revealed') === 'true';
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('rank');
@@ -81,6 +84,7 @@ export default function Admin({ onHome, onStartGame }) {
     let serverActive = [];
     let serverQuestions = null;
     let serverStatus = null;
+    let serverRevealed = null;
 
     const res = await adminFetch('/api/admin/live');
     if (res && res.ok) {
@@ -90,6 +94,7 @@ export default function Admin({ onHome, onStartGame }) {
         serverActive = Array.isArray(data.activeTeams) ? data.activeTeams : [];
         if (Array.isArray(data.questions) && data.questions.length > 0) serverQuestions = data.questions;
         if (data.quizStatus) serverStatus = data.quizStatus;
+        if (typeof data.leaderboardRevealed === 'boolean') serverRevealed = data.leaderboardRevealed;
       } catch (e) { console.error('[Admin] Sync parse error:', e.message); }
     }
 
@@ -137,6 +142,10 @@ export default function Admin({ onHome, onStartGame }) {
       if (serverStatus) {
         setQuizStatus(serverStatus);
         localStorage.setItem('quiz_status', serverStatus);
+      }
+      if (serverRevealed !== null) {
+        setLeaderboardRevealed(serverRevealed);
+        localStorage.setItem('quiz_leaderboard_revealed', String(serverRevealed));
       }
 
       localStorage.setItem('quiz_leaderboard', JSON.stringify(combinedLeaderboard));
@@ -366,7 +375,7 @@ export default function Admin({ onHome, onStartGame }) {
     }
   };
 
-  // --- Quiz Status Actions ---
+  // --- Quiz Status & Reveal Actions ---
   const handleToggleQuizStatus = async (newStatus) => {
     setQuizStatus(newStatus);
     localStorage.setItem('quiz_status', newStatus);
@@ -374,6 +383,16 @@ export default function Admin({ onHome, onStartGame }) {
     await adminFetch('/api/admin/status', {
       method: 'POST',
       body: JSON.stringify({ status: newStatus })
+    });
+  };
+
+  const handleToggleLeaderboardReveal = async (newRevealed) => {
+    setLeaderboardRevealed(newRevealed);
+    localStorage.setItem('quiz_leaderboard_revealed', String(newRevealed));
+    window.dispatchEvent(new Event('storage'));
+    await adminFetch('/api/admin/reveal', {
+      method: 'POST',
+      body: JSON.stringify({ revealed: newRevealed })
     });
   };
 
@@ -566,6 +585,12 @@ export default function Admin({ onHome, onStartGame }) {
               </div>
 
               <div className="action-buttons">
+                <Button
+                  onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
+                  className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
+                >
+                  {leaderboardRevealed ? '🎉 Leaderboard Revealed (Click to Hide)' : '🎉 Reveal Leaderboard to Everyone'}
+                </Button>
                 <Button onClick={handleExportCSV} disabled={leaderboard.length === 0} className="export-btn">
                   <FaDownload /> Export CSV
                 </Button>
@@ -726,6 +751,21 @@ export default function Admin({ onHome, onStartGame }) {
                     <FaPause /> Pause Quiz (Maintenance)
                   </Button>
                 </div>
+              </div>
+
+              <div className="control-option-card glass" style={{ padding: '1.2rem', borderRadius: '12px', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#1b3831' }}>Reveal Leaderboard to Everyone</h3>
+                  <p style={{ margin: '0.3rem 0 0 0', color: '#568667', fontSize: '0.9rem' }}>
+                    Trigger party pop-up celebration & display final rank leaderboard to all player screens.
+                  </p>
+                </div>
+                <Button
+                  className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
+                  onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
+                >
+                  <FaTrophy /> {leaderboardRevealed ? '🎉 Hide Leaderboard' : '🎉 Publish & Reveal Leaderboard'}
+                </Button>
               </div>
 
               <div className="control-option-card glass" style={{ padding: '1.2rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>

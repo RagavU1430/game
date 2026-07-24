@@ -21,13 +21,14 @@ function loadDB() {
         activeTeams: (parsed.activeTeams && typeof parsed.activeTeams === 'object') ? parsed.activeTeams : {},
         questions: (Array.isArray(parsed.questions) && parsed.questions.length > 0) ? parsed.questions : DEFAULT_QUESTIONS,
         quizStatus: parsed.quizStatus || 'active',
+        leaderboardRevealed: !!parsed.leaderboardRevealed,
         kickedTeams: Array.isArray(parsed.kickedTeams) ? parsed.kickedTeams : [],
         adminTokens: Array.isArray(parsed.adminTokens) ? parsed.adminTokens : [],
         teamAnswers: (parsed.teamAnswers && typeof parsed.teamAnswers === 'object') ? parsed.teamAnswers : {}
       };
     }
   } catch (e) { console.error('[DB] Load error:', e.message); }
-  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [], adminTokens: [], teamAnswers: {} };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', leaderboardRevealed: false, kickedTeams: [], adminTokens: [], teamAnswers: {} };
 }
 
 function saveDB(data) {
@@ -257,9 +258,21 @@ function liveQuizApiPlugin() {
               return;
             }
 
-            // 6. Get quiz status (public)
+            // 6. Get quiz status & reveal state (public)
             if (url === '/api/status' && req.method === 'GET') {
-              res.end(JSON.stringify({ status: db.quizStatus || 'active' }));
+              res.end(JSON.stringify({
+                status: db.quizStatus || 'active',
+                leaderboardRevealed: !!db.leaderboardRevealed
+              }));
+              return;
+            }
+
+            // 7. Get public leaderboard (public — only returns leaderboard data if revealed)
+            if (url === '/api/leaderboard' && req.method === 'GET') {
+              res.end(JSON.stringify({
+                revealed: !!db.leaderboardRevealed,
+                leaderboard: db.leaderboard || []
+              }));
               return;
             }
 
@@ -299,6 +312,15 @@ function liveQuizApiPlugin() {
               }
             }
 
+            // Admin Reveal Leaderboard Endpoint
+            if (url === '/api/admin/reveal') {
+              const { revealed } = body;
+              db.leaderboardRevealed = typeof revealed === 'boolean' ? revealed : true;
+              saveDB(db);
+              res.end(JSON.stringify({ success: true, leaderboardRevealed: db.leaderboardRevealed }));
+              return;
+            }
+
             // Admin Live Data Sync
             if (url === '/api/admin/live') {
               const now = Date.now();
@@ -313,6 +335,7 @@ function liveQuizApiPlugin() {
                 activeTeams: Object.values(db.activeTeams),
                 questions: db.questions,
                 quizStatus: db.quizStatus || 'active',
+                leaderboardRevealed: !!db.leaderboardRevealed,
                 kickedTeams: db.kickedTeams || []
               }));
               return;

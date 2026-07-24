@@ -81,6 +81,7 @@ export async function loadDB() {
           activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
           questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
           quizStatus: data.quizStatus || 'active',
+          leaderboardRevealed: !!data.leaderboardRevealed,
           kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
           adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
           teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}
@@ -98,6 +99,7 @@ export async function loadDB() {
         activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
         questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
         quizStatus: data.quizStatus || 'active',
+        leaderboardRevealed: !!data.leaderboardRevealed,
         kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
         adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
         teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}
@@ -105,7 +107,7 @@ export async function loadDB() {
     }
   } catch (e) { console.error('[DB] Local load error:', e.message); }
 
-  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [], adminTokens: [], teamAnswers: {} };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', leaderboardRevealed: false, kickedTeams: [], adminTokens: [], teamAnswers: {} };
 }
 
 export async function saveDB(data) {
@@ -114,6 +116,7 @@ export async function saveDB(data) {
     activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
     questions: Array.isArray(data.questions) ? data.questions : DEFAULT_QUESTIONS,
     quizStatus: data.quizStatus || 'active',
+    leaderboardRevealed: !!data.leaderboardRevealed,
     kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
     adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
     teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}

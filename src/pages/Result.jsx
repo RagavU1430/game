@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaTrophy, FaClock, FaUsers, FaCircleCheck } from 'react-icons/fa6';
 import FloatingBackground from '../components/FloatingBackground';
+import Button from '../components/Button';
 
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -11,9 +12,8 @@ function formatTime(ms) {
   return `${mins}:${secs}:${millis}`;
 }
 
-// Fix #11: Accept totalQuestions as prop instead of static import
-export default function Result({ score, totalTime = 0, teamName = '', totalQuestions = 10, onAutoReturnHome }) {
-  const [countdown, setCountdown] = useState(5);
+export default function Result({ score, totalTime = 0, teamName = '', totalQuestions = 10, onAutoReturnHome, leaderboardRevealed = false, onOpenLeaderboard }) {
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -79,6 +79,14 @@ export default function Result({ score, totalTime = 0, teamName = '', totalQuest
             <FaClock />
             <span>Total Time: <strong>{formatTime(totalTime)}</strong></span>
           </div>
+
+          {leaderboardRevealed && (
+            <div style={{ margin: '1rem 0' }}>
+              <Button onClick={onOpenLeaderboard} className="reveal-banner-btn" style={{ width: '100%' }}>
+                <FaTrophy /> 🎉 View Final Event Leaderboard
+              </Button>
+            </div>
+          )}
 
           <div className="completion-banner">
             <FaCircleCheck className="check-icon" />
