@@ -75,9 +75,12 @@ function App() {
           if (typeof data.leaderboardRevealed === 'boolean') {
             setLeaderboardRevealed(data.leaderboardRevealed);
             
-            // Auto open celebration pop-up modal ONLY at the end of the quiz
+            // Auto open celebration pop-up modal ONLY at the end of the quiz IF there are completed teams
             const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
-            if (data.leaderboardRevealed && isAtEnd) {
+            const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
+            const hasCompletedTeams = Array.isArray(localLeaderboard) && localLeaderboard.length > 0;
+
+            if (data.leaderboardRevealed && isAtEnd && hasCompletedTeams) {
               if (!hasAutoOpenedCelebration) {
                 setShowCelebrationModal(true);
                 setHasAutoOpenedCelebration(true);
@@ -106,7 +109,10 @@ function App() {
   // Auto trigger modal when player finishes game if host already revealed leaderboard
   useEffect(() => {
     const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
-    if (leaderboardRevealed && isAtEnd && !hasAutoOpenedCelebration) {
+    const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
+    const hasCompletedTeams = Array.isArray(localLeaderboard) && localLeaderboard.length > 0;
+
+    if (leaderboardRevealed && isAtEnd && hasCompletedTeams && !hasAutoOpenedCelebration) {
       setShowCelebrationModal(true);
       setHasAutoOpenedCelebration(true);
     }

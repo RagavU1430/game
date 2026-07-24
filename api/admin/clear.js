@@ -16,11 +16,12 @@ export default async function handler(req, res) {
 
   const db = await loadDB();
 
-  // Clear all data including kickedTeams (fix #13)
+  // Clear all data including kickedTeams and reset reveal state
   db.leaderboard = [];
   db.activeTeams = {};
   db.kickedTeams = [];
   db.teamAnswers = {};
+  db.leaderboardRevealed = false;
   await saveDB(db);
 
   res.status(200).json({ success: true });
