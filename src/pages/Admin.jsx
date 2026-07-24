@@ -472,6 +472,12 @@ export default function Admin({ onHome, onStartGame }) {
             <h1>Admin Dashboard & Control Center</h1>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <Button
+              className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
+              onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
+            >
+              <FaTrophy /> {leaderboardRevealed ? '🎉 Leaderboard Revealed' : '🎉 Reveal Leaderboard to Everyone'}
+            </Button>
             <Button onClick={onStartGame}>
               <FaPlay /> Launch Quiz Round
             </Button>
@@ -506,6 +512,23 @@ export default function Admin({ onHome, onStartGame }) {
         {/* TAB 1: MONITOR & LEADERBOARD */}
         {activeTab === 'monitor' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Top Prominent Callout Banner for Leaderboard Reveal */}
+            <div className={`reveal-callout-banner glass ${leaderboardRevealed ? 'revealed-banner' : 'unrevealed-banner'}`}>
+              <div className="reveal-banner-info">
+                <span className="banner-party-icon">{leaderboardRevealed ? '✨' : '🎉'}</span>
+                <div>
+                  <strong>{leaderboardRevealed ? 'Leaderboard is LIVE & REVEALED to all players!' : 'All players finished? Reveal the leaderboard to everyone!'}</strong>
+                  <p>{leaderboardRevealed ? 'Celebration pop-up with confetti & podium is active on all player screens.' : 'Triggers party confetti animation and top podium rankings on all player devices.'}</p>
+                </div>
+              </div>
+              <Button
+                className={leaderboardRevealed ? 'reveal-active-btn' : 'reveal-btn'}
+                onClick={() => handleToggleLeaderboardReveal(!leaderboardRevealed)}
+              >
+                <FaTrophy /> {leaderboardRevealed ? '🎉 Hide Leaderboard' : '🎉 REVEAL LEADERBOARD TO EVERYONE'}
+              </Button>
+            </div>
+
             {/* Stats Summary Cards */}
             <div className="admin-stats-grid">
               <div className="stat-card glass">
