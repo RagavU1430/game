@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const DB_FILE = path.resolve(__dirname, 'leaderboard_db.json');
 
 // Import shared defaults (single source of truth)
-import { DEFAULT_QUESTIONS, CLIENT_QUESTIONS, ADMIN_SECRET, generateToken } from './shared/defaults.js';
+import { DEFAULT_QUESTIONS, CLIENT_QUESTIONS, ADMIN_SECRET, generateToken, verifyToken } from './shared/defaults.js';
 
 function loadDB() {
   try {
@@ -43,7 +43,7 @@ function isValidAdmin(req) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.replace('Bearer ', '').trim();
   if (!token) return false;
-  return Array.isArray(db.adminTokens) && db.adminTokens.includes(token);
+  return verifyToken(token, ADMIN_SECRET);
 }
 
 // Clean expired kicked teams (older than 24 hours)

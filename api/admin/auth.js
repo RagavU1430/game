@@ -1,4 +1,4 @@
-import { loadDB, saveDB, ADMIN_SECRET, generateToken } from '../_store.js';
+import { ADMIN_SECRET, generateToken } from '../_store.js';
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || '';
@@ -14,15 +14,7 @@ export default async function handler(req, res) {
   const { passcode } = req.body || {};
 
   if (passcode === ADMIN_SECRET) {
-    const db = await loadDB();
     const token = generateToken(passcode);
-    if (!Array.isArray(db.adminTokens)) db.adminTokens = [];
-    db.adminTokens.push(token);
-    // Keep only last 10 tokens
-    if (db.adminTokens.length > 10) {
-      db.adminTokens = db.adminTokens.slice(-10);
-    }
-    await saveDB(db);
     return res.status(200).json({ success: true, token });
   }
 

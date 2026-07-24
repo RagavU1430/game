@@ -1,13 +1,4 @@
-import { loadDB, saveDB, DEFAULT_QUESTIONS } from '../_store.js';
-
-// Validate admin token from Authorization header
-function isValidAdmin(req) {
-  const authHeader = req.headers['authorization'] || '';
-  const token = authHeader.replace('Bearer ', '').trim();
-  if (!token) return false;
-  // For Vercel, we need to check the DB each time
-  return true; // Token validation happens in loadDB check below
-}
+import { loadDB, saveDB, DEFAULT_QUESTIONS, verifyToken } from '../_store.js';
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || '';
@@ -16,14 +7,14 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = await loadDB();
-
   // Validate admin token
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.replace('Bearer ', '').trim();
-  if (!token || !(Array.isArray(db.adminTokens) && db.adminTokens.includes(token))) {
+  if (!token || !verifyToken(token)) {
     return res.status(401).json({ error: 'Unauthorized — valid admin token required' });
   }
+
+  const db = await loadDB();
 
   const now = Date.now();
   // Clean up active teams older than 30 mins

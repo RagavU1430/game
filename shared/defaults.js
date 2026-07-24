@@ -20,7 +20,7 @@ export const CLIENT_QUESTIONS = DEFAULT_QUESTIONS.map(({ answer, ...rest }) => r
 export const ADMIN_SECRET = 'admin123';
 
 // Simple token generation (hash-like for session)
-export function generateToken(pin) {
+export function generateToken(pin = ADMIN_SECRET) {
   const timestamp = Date.now();
   const raw = `${pin}_${timestamp}_quiz_session`;
   let hash = 0;
@@ -30,4 +30,34 @@ export function generateToken(pin) {
     hash |= 0;
   }
   return `quiz_${Math.abs(hash).toString(36)}_${timestamp.toString(36)}`;
+}
+
+export function verifyToken(token, pin = ADMIN_SECRET) {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('_');
+  if (parts.length !== 3 || parts[0] !== 'quiz') return false;
+
+  const hashStr = parts[1];
+  const timeStr = parts[2];
+  const timestamp = parseInt(timeStr, 36);
+  if (isNaN(timestamp) || timestamp <= 0) return false;
+
+  // Token expires after 7 days (604,800,000 ms)
+  const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  if (now - timestamp > MAX_AGE || timestamp > now + 300000) {
+    return false;
+  }
+
+  // Re-verify hash signature
+  const raw = `${pin}_${timestamp}_quiz_session`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  const expectedHashStr = Math.abs(hash).toString(36);
+
+  return hashStr === expectedHashStr;
 }

@@ -50,9 +50,10 @@ export default function Admin({ onHome, onStartGame }) {
 
   // Helper: make authenticated admin API requests
   const adminFetch = useCallback(async (url, options = {}) => {
+    const tokenToUse = adminToken || sessionStorage.getItem('quiz_admin_token') || '';
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${adminToken}`,
+      'Authorization': `Bearer ${tokenToUse}`,
       ...(options.headers || {})
     };
     try {
@@ -73,7 +74,8 @@ export default function Admin({ onHome, onStartGame }) {
 
   // Live polling and synchronization (fix #18 — reduced to 3s)
   const syncData = useCallback(async () => {
-    if (!adminToken) return;
+    const activeToken = adminToken || sessionStorage.getItem('quiz_admin_token');
+    if (!activeToken) return;
 
     let serverLeaderboard = [];
     let serverActive = [];
