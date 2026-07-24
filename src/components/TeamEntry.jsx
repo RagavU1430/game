@@ -1,15 +1,22 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUsers, FaArrowRight } from 'react-icons/fa6';
+import { FaUsers, FaArrowRight, FaXmark } from 'react-icons/fa6';
 import Button from './Button';
 
-export default function TeamEntry({ open, onSubmit }) {
+// Fix #26: Sanitize team name to prevent CSV injection
+function sanitizeTeamName(name) {
+  // Strip leading dangerous characters for CSV safety
+  return name.replace(/^[=+\-@\t\r]+/, '').trim();
+}
+
+// Fix #20: Added onClose prop and close button
+export default function TeamEntry({ open, onSubmit, onClose }) {
   const [teamName, setTeamName] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const name = teamName.trim();
+    const name = sanitizeTeamName(teamName.trim());
     if (!name) {
       setError('Please enter a team name');
       return;
@@ -27,6 +34,12 @@ export default function TeamEntry({ open, onSubmit }) {
     setTeamName('');
   };
 
+  const handleClose = () => {
+    setTeamName('');
+    setError('');
+    if (onClose) onClose();
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -35,6 +48,7 @@ export default function TeamEntry({ open, onSubmit }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onMouseDown={handleClose}
         >
           <motion.section
             className="team-modal glass"
@@ -46,6 +60,17 @@ export default function TeamEntry({ open, onSubmit }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
           >
+            {/* Close button (fix #20) */}
+            <button
+              className="modal-close-btn"
+              onClick={handleClose}
+              type="button"
+              aria-label="Close"
+              title="Close"
+            >
+              <FaXmark />
+            </button>
+
             <div className="modal-icon team-icon">
               <FaUsers />
             </div>

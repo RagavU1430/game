@@ -17,40 +17,25 @@ function formatTime(ms) {
   return `${mins}:${secs}:${millis}`;
 }
 
-const DEFAULT_QUESTIONS_LIST = [
-  {"id": 1, "image": "/images/q1.jpeg", "answer": 6, "title": "Beach Day", "hint": "Look at the sand castle, beach ball, and umbrella"},
-  {"id": 2, "image": "/images/q2.jpeg", "answer": 3, "title": "Horse Racing", "hint": "Check the jockey's gear and the horse's features"},
-  {"id": 3, "image": "/images/q3.jpeg", "answer": 3, "title": "Vegetables", "hint": "Compare the mushrooms, potatoes, and carrots"},
-  {"id": 4, "image": "/images/q4.jpeg", "answer": 5, "title": "Art Class", "hint": "Look at the crayons, paint palette, and shapes"},
-  {"id": 5, "image": "/images/q5.jpeg", "answer": 5, "title": "Zoo Visit", "hint": "Check the animals, children, and fence area"},
-  {"id": 6, "image": "/images/q6.jpeg", "answer": 6, "title": "Construction", "hint": "Look at the workers, tools, and steel beams"},
-  {"id": 7, "image": "/images/q7.jpeg", "answer": 5, "title": "Carnival Fun", "hint": "Check the ferris wheel, tent, and ticket booth"},
-  {"id": 8, "image": "/images/q8.jpeg", "answer": 5, "title": "School Bus", "hint": "Look at the birds, bus number, and children"},
-  {"id": 9, "image": "/images/q9.jpeg", "answer": 5, "title": "Baseball", "hint": "Check the trees, ball, and boy's clothes"},
-  {"id": 10, "image": "/images/q10.jpeg", "answer": 3, "title": "Forest Picnic", "hint": "Look at the fruit, cup, and sky"}
-];
-
 export default function Admin({ onHome, onStartGame }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('quiz_admin_auth') === 'true';
+    return !!sessionStorage.getItem('quiz_admin_token');
+  });
+
+  // Server-side auth token (fix #1 — no hardcoded password in frontend)
+  const [adminToken, setAdminToken] = useState(() => {
+    return sessionStorage.getItem('quiz_admin_token') || '';
   });
 
   const [passcode, setPasscode] = useState('');
   const [passError, setPassError] = useState('');
-  const [activeTab, setActiveTab] = useState('monitor'); // 'monitor', 'questions', 'controls'
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [activeTab, setActiveTab] = useState('monitor');
 
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeTeams, setActiveTeams] = useState([]);
-  const [questionsBank, setQuestionsBank] = useState(() => {
-    const saved = localStorage.getItem('quiz_custom_questions');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return DEFAULT_QUESTIONS_LIST;
-  });
-  const [quizStatus, setQuizStatus] = useState(() => {
-    return localStorage.getItem('quiz_status') || 'active';
-  });
+  const [questionsBank, setQuestionsBank] = useState([]);
+  const [quizStatus, setQuizStatus] = useState('active');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('rank');
@@ -63,25 +48,48 @@ export default function Admin({ onHome, onStartGame }) {
   const [formAnswer, setFormAnswer] = useState('');
   const [formHint, setFormHint] = useState('');
 
-  const ADMIN_PIN = 'admin123';
+  // Helper: make authenticated admin API requests
+  const adminFetch = useCallback(async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${adminToken}`,
+      ...(options.headers || {})
+    };
+    try {
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401) {
+        // Token expired or invalid — force re-login
+        setIsAuthenticated(false);
+        setAdminToken('');
+        sessionStorage.removeItem('quiz_admin_token');
+        return null;
+      }
+      return res;
+    } catch (e) {
+      console.error(`[Admin] Fetch error for ${url}:`, e.message);
+      return null;
+    }
+  }, [adminToken]);
 
-  // Live polling and synchronization
+  // Live polling and synchronization (fix #18 — reduced to 3s)
   const syncData = useCallback(async () => {
+    if (!adminToken) return;
+
     let serverLeaderboard = [];
     let serverActive = [];
     let serverQuestions = null;
     let serverStatus = null;
 
-    try {
-      const res = await fetch('/api/admin/live');
-      if (res.ok) {
+    const res = await adminFetch('/api/admin/live');
+    if (res && res.ok) {
+      try {
         const data = await res.json();
         serverLeaderboard = Array.isArray(data.leaderboard) ? data.leaderboard : [];
         serverActive = Array.isArray(data.activeTeams) ? data.activeTeams : [];
         if (Array.isArray(data.questions) && data.questions.length > 0) serverQuestions = data.questions;
         if (data.quizStatus) serverStatus = data.quizStatus;
-      }
-    } catch (e) {}
+      } catch (e) { console.error('[Admin] Sync parse error:', e.message); }
+    }
 
     try {
       const localLeaderboard = JSON.parse(localStorage.getItem('quiz_leaderboard') || '[]');
@@ -131,38 +139,70 @@ export default function Admin({ onHome, onStartGame }) {
 
       localStorage.setItem('quiz_leaderboard', JSON.stringify(combinedLeaderboard));
       localStorage.setItem('quiz_active_teams', JSON.stringify(finalActive));
-    } catch (err) {}
-  }, []);
+    } catch (err) { console.error('[Admin] Sync merge error:', err.message); }
+  }, [adminToken, adminFetch]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     syncData();
     const handleStorageChange = () => syncData();
     window.addEventListener('storage', handleStorageChange);
-    const intervalId = setInterval(syncData, 1000);
+    // Fix #18: Reduced from 1s to 3s
+    const intervalId = setInterval(syncData, 3000);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(intervalId);
     };
-  }, [syncData]);
+  }, [syncData, isAuthenticated]);
 
-  const handleLogin = (e) => {
+  // Server-side login (fix #1, #2, #5 — password validated server-side, no hints)
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (passcode === ADMIN_PIN || passcode === 'admin') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('quiz_admin_auth', 'true');
-      setPassError('');
-    } else {
-      setPassError('Incorrect passcode! (Default: admin123)');
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    setPassError('');
+
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.token) {
+          setAdminToken(data.token);
+          sessionStorage.setItem('quiz_admin_token', data.token);
+          setIsAuthenticated(true);
+          setPassError('');
+        } else {
+          setPassError('Authentication failed. Please try again.');
+        }
+      } else {
+        setPassError('Incorrect passcode. Please try again.');
+      }
+    } catch (e) {
+      console.error('[Admin] Login error:', e.message);
+      setPassError('Connection error. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
     }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAdminToken('');
+    sessionStorage.removeItem('quiz_admin_token');
+    onHome();
   };
 
   const handleClearAll = async () => {
     if (window.confirm('Are you sure you want to clear all team results and live sessions? This action cannot be undone.')) {
-      try {
-        await fetch('/api/admin/clear', { method: 'POST' });
-      } catch (e) {}
+      await adminFetch('/api/admin/clear', { method: 'POST' });
       localStorage.removeItem('quiz_leaderboard');
       localStorage.removeItem('quiz_active_teams');
+      localStorage.removeItem('quiz_kicked_teams');
       setLeaderboard([]);
       setActiveTeams([]);
       window.dispatchEvent(new Event('storage'));
@@ -170,13 +210,10 @@ export default function Admin({ onHome, onStartGame }) {
   };
 
   const handleDeleteEntry = async (itemToDelete, indexToDelete) => {
-    try {
-      await fetch('/api/admin/delete-entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemToDelete.id })
-      });
-    } catch (e) {}
+    await adminFetch('/api/admin/delete-entry', {
+      method: 'POST',
+      body: JSON.stringify({ id: itemToDelete.id })
+    });
 
     const updated = leaderboard.filter((_, idx) => idx !== indexToDelete);
     setLeaderboard(updated);
@@ -189,13 +226,10 @@ export default function Admin({ onHome, onStartGame }) {
       return;
     }
 
-    try {
-      await fetch('/api/admin/delete-entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamName: teamNameToDelete })
-      });
-    } catch (e) {}
+    await adminFetch('/api/admin/delete-entry', {
+      method: 'POST',
+      body: JSON.stringify({ teamName: teamNameToDelete })
+    });
 
     const currentKicked = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
     if (!currentKicked.includes(teamNameToDelete)) {
@@ -209,9 +243,10 @@ export default function Admin({ onHome, onStartGame }) {
     window.dispatchEvent(new Event('storage'));
   };
 
+  // Fix #27: CSV export using Blob instead of encodeURI
   const handleExportCSV = () => {
     if (leaderboard.length === 0) return;
-    let csvContent = 'data:text/csv;charset=utf-8,Rank,Team Name,Score,Total Time (ms),Time Formatted,Date\n';
+    let csvContent = 'Rank,Team Name,Score,Total Time (ms),Time Formatted,Date\n';
     
     const sorted = [...leaderboard].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
@@ -220,27 +255,31 @@ export default function Admin({ onHome, onStartGame }) {
 
     sorted.forEach((item, index) => {
       const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'N/A';
-      csvContent += `${index + 1},"${item.teamName.replace(/"/g, '""')}",${item.score},${item.time},${formatTime(item.time)},"${dateStr}"\n`;
+      // Fix #26: Sanitize team names for CSV injection
+      const safeName = item.teamName.replace(/^[=+\-@\t\r]/g, "'$&").replace(/"/g, '""');
+      csvContent += `${index + 1},"${safeName}",${item.score},${item.time},${formatTime(item.time)},"${dateStr}"\n`;
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `spot_difference_leaderboard_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // --- Question Bank Actions ---
   const saveQuestionsToServer = async (action, data) => {
-    try {
-      const res = await fetch('/api/admin/questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...data })
-      });
-      if (res.ok) {
+    const res = await adminFetch('/api/admin/questions', {
+      method: 'POST',
+      body: JSON.stringify({ action, ...data })
+    });
+
+    if (res && res.ok) {
+      try {
         const body = await res.json();
         if (body.questions) {
           setQuestionsBank(body.questions);
@@ -248,13 +287,14 @@ export default function Admin({ onHome, onStartGame }) {
           window.dispatchEvent(new Event('storage'));
           return body.questions;
         }
-      }
-    } catch (e) {}
+      } catch (e) { console.error('[Admin] Questions save parse error:', e.message); }
+    }
 
     // Fallback to local updating
     let updated = [...questionsBank];
     if (action === 'reset') {
-      updated = [...DEFAULT_QUESTIONS_LIST];
+      // Fetch defaults from server
+      updated = [];
     } else if (action === 'add' && data.question) {
       const nextId = updated.length > 0 ? Math.max(...updated.map(q => q.id)) + 1 : 1;
       updated.push({ ...data.question, id: nextId });
@@ -329,13 +369,10 @@ export default function Admin({ onHome, onStartGame }) {
     setQuizStatus(newStatus);
     localStorage.setItem('quiz_status', newStatus);
     window.dispatchEvent(new Event('storage'));
-    try {
-      await fetch('/api/admin/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-    } catch (e) {}
+    await adminFetch('/api/admin/status', {
+      method: 'POST',
+      body: JSON.stringify({ status: newStatus })
+    });
   };
 
   // Sort and filter leaderboard
@@ -352,6 +389,7 @@ export default function Admin({ onHome, onStartGame }) {
   const bestScore = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.score)) : 0;
   const fastestTime = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.time)) : 0;
 
+  // Login screen (fix #5 — no password hint in placeholder or error message)
   if (!isAuthenticated) {
     return (
       <>
@@ -374,16 +412,19 @@ export default function Admin({ onHome, onStartGame }) {
                 <FaKey className="key-icon" />
                 <input
                   type="password"
-                  placeholder="Enter passcode (admin123)"
+                  placeholder="Enter admin passcode"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="admin-input"
                   autoFocus
+                  disabled={isLoggingIn}
                 />
               </div>
               {passError && <p className="admin-error">{passError}</p>}
               <div className="admin-login-actions">
-                <Button type="submit">Unlock Dashboard</Button>
+                <Button type="submit" disabled={isLoggingIn}>
+                  {isLoggingIn ? 'Authenticating...' : 'Unlock Dashboard'}
+                </Button>
                 <Button type="button" className="secondary" onClick={onHome}>
                   <FaHouse /> Back Home
                 </Button>
@@ -413,8 +454,8 @@ export default function Admin({ onHome, onStartGame }) {
             <Button onClick={onStartGame}>
               <FaPlay /> Launch Quiz Round
             </Button>
-            <Button className="secondary" onClick={onHome}>
-              <FaHouse /> Home Page
+            <Button className="secondary" onClick={handleLogout}>
+              <FaLock /> Logout
             </Button>
           </div>
         </header>

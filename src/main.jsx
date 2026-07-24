@@ -34,6 +34,9 @@ function App() {
     return Number(sessionStorage.getItem('quiz_current_time')) || 0;
   });
 
+  // Track total questions dynamically
+  const [totalQuestions, setTotalQuestions] = useState(10);
+
   const [isCompleted, setIsCompleted] = useState(false);
 
   const [run, setRun] = useState(0);
@@ -43,6 +46,18 @@ function App() {
     setViewInternal(newView);
     sessionStorage.setItem('quiz_current_view', newView);
   };
+
+  // Fetch question count from server for dynamic total
+  useEffect(() => {
+    fetch('/api/questions')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.questions)) {
+          setTotalQuestions(data.questions.length);
+        }
+      })
+      .catch((e) => { console.error('[App] Questions count fetch error:', e.message); });
+  }, []);
 
   const begin = (name) => {
     const selectedTeam = name || teamName || 'Anonymous Team';
@@ -66,7 +81,17 @@ function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teamName: selectedTeam })
-    }).catch(() => {});
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.kicked) {
+          // Team was kicked by admin — prevent login
+          alert('This team has been removed by the admin. Please use a different team name.');
+          setView('home');
+          return;
+        }
+      })
+      .catch((e) => { console.error('[App] Login error:', e.message); });
 
     // Fallback local storage update
     try {
@@ -84,7 +109,7 @@ function App() {
       const updated = [newActive, ...filtered];
       localStorage.setItem('quiz_active_teams', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
+    } catch (e) { console.error('[App] Active teams update error:', e.message); }
 
     setView('game');
   };
@@ -102,7 +127,7 @@ function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teamName: currentTeam, score: finalScore, time: finalTime })
-    }).catch(() => {});
+    }).catch((e) => { console.error('[App] Complete error:', e.message); });
 
     // Fallback local storage update
     try {
@@ -121,7 +146,7 @@ function App() {
       localStorage.setItem('quiz_active_teams', JSON.stringify(remainingActive));
 
       window.dispatchEvent(new Event('storage'));
-    } catch (e) {}
+    } catch (e) { console.error('[App] Leaderboard update error:', e.message); }
 
     setView('result');
   };
@@ -132,6 +157,18 @@ function App() {
     setIsCompleted(true);
     setView('home');
   };
+
+  // Allow admin access via keyboard shortcut (Ctrl+Shift+A)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setView('admin');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => { document.title = 'Spot the Differences Challenge'; }, []);
 
@@ -144,7 +181,6 @@ function App() {
           <motion.div key="home" className="page" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
             <Home
               onStart={(name) => begin(name)}
-              onOpenAdmin={() => setView('admin')}
               isCompleted={isCompleted}
             />
           </motion.div>
@@ -165,6 +201,7 @@ function App() {
                 score={score}
                 totalTime={totalTime}
                 teamName={teamName}
+                totalQuestions={totalQuestions}
                 onAutoReturnHome={handleAutoReturnHome}
               />
             </Suspense>
@@ -188,6 +225,7 @@ function App() {
           setShowTeamModalFromAdmin(false);
           begin(name);
         }}
+        onClose={() => setShowTeamModalFromAdmin(false)}
       />
     </main>
   );

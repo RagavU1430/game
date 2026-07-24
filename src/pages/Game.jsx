@@ -8,14 +8,17 @@ import Button from '../components/Button';
 import { FaPause, FaHouse } from 'react-icons/fa6';
 
 export default function Game({ onHome, onComplete, teamName }) {
-  // Dynamic question list state
+  // Dynamic question list state (client-safe — no answers)
   const [questionsList, setQuestionsList] = useState(() => {
     const saved = localStorage.getItem('quiz_custom_questions');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Strip answers from client-side data for safety
+          return parsed.map(({ answer, ...rest }) => rest);
+        }
+      } catch (e) { console.error('[Game] Questions parse error:', e.message); }
     }
     return defaultQuestions;
   });
@@ -24,22 +27,22 @@ export default function Game({ onHome, onComplete, teamName }) {
     return localStorage.getItem('quiz_status') || 'active';
   });
 
-  // Load latest questions & status from server or localStorage
+  // Load latest questions & status from server
   useEffect(() => {
     const fetchLatestServerData = async () => {
+      // Fetch client-safe questions (no answers)
       try {
-        const res = await fetch('/api/admin/questions');
+        const res = await fetch('/api/questions');
         if (res.ok) {
           const body = await res.json();
           if (Array.isArray(body.questions) && body.questions.length > 0) {
             setQuestionsList(body.questions);
-            localStorage.setItem('quiz_custom_questions', JSON.stringify(body.questions));
           }
         }
-      } catch (e) {}
+      } catch (e) { console.error('[Game] Questions fetch error:', e.message); }
 
       try {
-        const resStatus = await fetch('/api/admin/status');
+        const resStatus = await fetch('/api/status');
         if (resStatus.ok) {
           const bodyStatus = await resStatus.json();
           if (bodyStatus.status) {
@@ -47,43 +50,41 @@ export default function Game({ onHome, onComplete, teamName }) {
             localStorage.setItem('quiz_status', bodyStatus.status);
           }
         }
-      } catch (e) {}
+      } catch (e) { console.error('[Game] Status fetch error:', e.message); }
     };
 
     fetchLatestServerData();
 
+    // Fix #19: Reduced polling from 2s to 5s
     const handleStorageChange = () => {
-      const savedQ = localStorage.getItem('quiz_custom_questions');
-      if (savedQ) {
-        try {
-          const parsed = JSON.parse(savedQ);
-          if (Array.isArray(parsed) && parsed.length > 0) setQuestionsList(parsed);
-        } catch (e) {}
-      }
       const savedStatus = localStorage.getItem('quiz_status');
       if (savedStatus) setQuizStatus(savedStatus);
 
       // Check if session was kicked by admin
       if (teamName) {
-        const active = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
-        const isStillActive = active.some(t => t.teamName === teamName);
-        if (!isStillActive) {
-          // Team session was cleared/kicked by admin!
-          localStorage.removeItem('quiz_game_index');
-          localStorage.removeItem('quiz_game_score');
-          localStorage.removeItem('quiz_game_start_time');
-          onHome();
+        const kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+        if (kickedList.includes(teamName)) {
+          cleanupAndGoHome();
         }
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 2000);
+    const interval = setInterval(handleStorageChange, 5000);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [teamName, onHome]);
+  }, [teamName]);
+
+  const cleanupAndGoHome = useCallback(() => {
+    localStorage.removeItem('quiz_game_index');
+    localStorage.removeItem('quiz_game_score');
+    localStorage.removeItem('quiz_game_start_time');
+    sessionStorage.removeItem('quiz_current_team');
+    sessionStorage.removeItem('quiz_current_view');
+    onHome();
+  }, [onHome]);
 
   // Restore current question index on refresh
   const [index, setIndexInternal] = useState(() => {
@@ -120,10 +121,10 @@ export default function Game({ onHome, onComplete, teamName }) {
 
   const [showHint, setShowHint] = useState(false);
 
-  // Timer state — restore startTime so refresh doesn't reset clock
+  // Fix #17: Timer uses setInterval at 100ms instead of requestAnimationFrame
   const [elapsed, setElapsed] = useState(0);
   const startTimeRef = useRef(0);
-  const rafRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     let savedStart = Number(localStorage.getItem('quiz_game_start_time'));
@@ -133,35 +134,27 @@ export default function Game({ onHome, onComplete, teamName }) {
       localStorage.setItem('quiz_game_start_time', String(savedStart));
     }
     startTimeRef.current = savedStart;
-  }, []);
 
-  const tick = useCallback(() => {
-    if (startTimeRef.current > 0) {
-      setElapsed(Date.now() - startTimeRef.current);
-    }
-    rafRef.current = requestAnimationFrame(tick);
-  }, []);
+    // Use setInterval at 100ms instead of RAF (~60fps)
+    timerRef.current = setInterval(() => {
+      if (startTimeRef.current > 0) {
+        setElapsed(Date.now() - startTimeRef.current);
+      }
+    }, 100);
 
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [tick]);
+  }, []);
 
-  // Live active team progress sync to central server API across network
+  // Live active team progress sync to central server API
   useEffect(() => {
     if (!teamName) return;
 
     // Check if team is already marked as kicked locally
     const kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
     if (kickedList.includes(teamName)) {
-      localStorage.removeItem('quiz_game_index');
-      localStorage.removeItem('quiz_game_score');
-      localStorage.removeItem('quiz_game_start_time');
-      sessionStorage.removeItem('quiz_current_team');
-      sessionStorage.removeItem('quiz_current_view');
-      onHome();
+      cleanupAndGoHome();
       return;
     }
 
@@ -179,15 +172,10 @@ export default function Game({ onHome, onComplete, teamName }) {
             currentKicked.push(teamName);
             localStorage.setItem('quiz_kicked_teams', JSON.stringify(currentKicked));
           }
-          localStorage.removeItem('quiz_game_index');
-          localStorage.removeItem('quiz_game_score');
-          localStorage.removeItem('quiz_game_start_time');
-          sessionStorage.removeItem('quiz_current_team');
-          sessionStorage.removeItem('quiz_current_view');
-          onHome();
+          cleanupAndGoHome();
         }
       })
-      .catch(() => {});
+      .catch((e) => { console.error('[Game] Progress sync error:', e.message); });
 
     try {
       const active = JSON.parse(localStorage.getItem('quiz_active_teams') || '[]');
@@ -202,13 +190,13 @@ export default function Game({ onHome, onComplete, teamName }) {
         localStorage.setItem('quiz_active_teams', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       }
-    } catch (e) {}
-  }, [index, score, teamName, onHome]);
+    } catch (e) { console.error('[Game] Local active teams update error:', e.message); }
+  }, [index, score, teamName, cleanupAndGoHome]);
 
   const stopTimer = () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
   };
 
@@ -234,41 +222,70 @@ export default function Game({ onHome, onComplete, teamName }) {
     }
   };
 
-  const submit = (e) => {
+  // Fix #7: Server-side answer validation
+  const submit = async (e) => {
     e.preventDefault();
     if (isSubmitting || !answer) return;
+    setIsSubmitting(true);
 
-    if (Number(answer) === current.answer) {
-      // Correct answer! Add score and auto advance directly
-      setCorrect(true);
-      setWrong(false);
-      setIsSubmitting(true);
-      const newScore = score + 1;
-      setScore(newScore);
+    try {
+      const res = await fetch('/api/team/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamName: teamName || 'Anonymous Team',
+          questionId: current.id,
+          answer: Number(answer)
+        })
+      });
 
-      setTimeout(() => {
-        advanceNext(newScore);
-      }, 900);
-    } else {
-      // Wrong answer -> 2 chances max
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      setWrong(true);
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
+      if (res.ok) {
+        const data = await res.json();
 
-      if (newAttempts >= 2) {
-        // Out of chances! Auto advance to next question
-        setIsSubmitting(true);
-        setTimeout(() => {
-          advanceNext(score);
-        }, 1300);
+        if (data.kicked) {
+          cleanupAndGoHome();
+          return;
+        }
+
+        if (data.correct) {
+          // Correct answer! Use server-validated score
+          setCorrect(true);
+          setWrong(false);
+          const newScore = data.serverScore !== undefined ? data.serverScore : score + 1;
+          setScore(newScore);
+
+          setTimeout(() => {
+            advanceNext(newScore);
+          }, 900);
+        } else {
+          // Wrong answer
+          const newAttempts = attempts + 1;
+          setAttempts(newAttempts);
+          setWrong(true);
+          setShake(true);
+          setTimeout(() => setShake(false), 500);
+
+          if (newAttempts >= 2) {
+            // Out of chances! Auto advance
+            setTimeout(() => {
+              advanceNext(data.serverScore !== undefined ? data.serverScore : score);
+            }, 1300);
+          } else {
+            // 1 attempt left, clear answer for retry
+            setIsSubmitting(false);
+            setTimeout(() => {
+              setAnswer('');
+            }, 500);
+          }
+        }
       } else {
-        // 1 attempt left, clear answer so user can retry
-        setTimeout(() => {
-          setAnswer('');
-        }, 500);
+        // Server error — allow retry
+        console.error('[Game] Answer API error:', res.status);
+        setIsSubmitting(false);
       }
+    } catch (err) {
+      console.error('[Game] Answer submit error:', err.message);
+      setIsSubmitting(false);
     }
   };
 

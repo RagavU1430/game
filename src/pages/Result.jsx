@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaStar, FaTrophy, FaClock, FaUsers, FaCircleCheck } from 'react-icons/fa6';
 import FloatingBackground from '../components/FloatingBackground';
-import questions from '../data/questions.json';
 
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -12,7 +11,8 @@ function formatTime(ms) {
   return `${mins}:${secs}:${millis}`;
 }
 
-export default function Result({ score, totalTime = 0, teamName = '', onAutoReturnHome }) {
+// Fix #11: Accept totalQuestions as prop instead of static import
+export default function Result({ score, totalTime = 0, teamName = '', totalQuestions = 10, onAutoReturnHome }) {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function Result({ score, totalTime = 0, teamName = '', onAutoRetu
 
           <div className="result-score">
             <small>Your Final Score</small>
-            <strong>{score} <i>/ {questions.length}</i></strong>
+            <strong>{score} <i>/ {totalQuestions}</i></strong>
           </div>
 
           <div className="result-time">

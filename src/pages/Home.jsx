@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaLeaf, FaHeart, FaUserShield } from 'react-icons/fa6';
+import { FaLeaf, FaHeart } from 'react-icons/fa6';
 import { useState } from 'react';
 import Button from '../components/Button';
 import FloatingBackground from '../components/FloatingBackground';
@@ -7,7 +7,7 @@ import RulesModal from '../components/RulesModal';
 import TeamEntry from '../components/TeamEntry';
 import InteractiveLogo from '../components/InteractiveLogo';
 
-export default function Home({ onStart, onOpenAdmin, isCompleted = false }) {
+export default function Home({ onStart, isCompleted = false }) {
   const [rules, setRules] = useState(false);
   const [teamModal, setTeamModal] = useState(false);
 
@@ -61,9 +61,6 @@ export default function Home({ onStart, onOpenAdmin, isCompleted = false }) {
               <div className="hero-actions">
                 <Button onClick={() => setRules(true)}>
                   Start the game
-                </Button>
-                <Button className="secondary admin-nav-btn" onClick={onOpenAdmin}>
-                  <FaUserShield /> Admin Panel
                 </Button>
               </div>
               <span className="gentle-note" style={{ marginTop: '0.8rem', display: 'block' }}>

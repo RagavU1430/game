@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const CLOUD_DB_URL = 'https://jsonblob.com/api/jsonBlob/019f8e6f-7446-7118-b999-df38f0083c8a';
+const CLOUD_DB_URL = process.env.CLOUD_DB_URL || 'https://jsonblob.com/api/jsonBlob/019f8e6f-7446-7118-b999-df38f0083c8a';
 const DB_FILE = process.env.VERCEL ? '/tmp/leaderboard_db.json' : path.resolve(process.cwd(), 'leaderboard_db.json');
 
 export const DEFAULT_QUESTIONS = [
@@ -16,6 +16,22 @@ export const DEFAULT_QUESTIONS = [
   {"id": 9, "image": "/images/q9.jpeg", "answer": 5, "title": "Baseball", "hint": "Check the trees, ball, and boy's clothes"},
   {"id": 10, "image": "/images/q10.jpeg", "answer": 3, "title": "Forest Picnic", "hint": "Look at the fruit, cup, and sky"}
 ];
+
+// Admin password — server-side only, never exposed to client (fix #1)
+export const ADMIN_SECRET = process.env.ADMIN_SECRET || 'admin123';
+
+// Simple token generation for admin sessions
+export function generateToken(pin) {
+  const timestamp = Date.now();
+  const raw = `${pin}_${timestamp}_quiz_session`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return `quiz_${Math.abs(hash).toString(36)}_${timestamp.toString(36)}`;
+}
 
 export async function loadDB() {
   // 1. Try Global Cloud DB (for Vercel serverless global sync)
@@ -32,11 +48,13 @@ export async function loadDB() {
           activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
           questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
           quizStatus: data.quizStatus || 'active',
-          kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
+          kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
+          adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
+          teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}
         };
       }
     }
-  } catch (e) {}
+  } catch (e) { console.error('[DB] Cloud load error:', e.message); }
 
   // 2. Local File Fallback
   try {
@@ -47,12 +65,14 @@ export async function loadDB() {
         activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
         questions: (Array.isArray(data.questions) && data.questions.length > 0) ? data.questions : DEFAULT_QUESTIONS,
         quizStatus: data.quizStatus || 'active',
-        kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
+        kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
+        adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
+        teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}
       };
     }
-  } catch (e) {}
+  } catch (e) { console.error('[DB] Local load error:', e.message); }
 
-  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [] };
+  return { leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', kickedTeams: [], adminTokens: [], teamAnswers: {} };
 }
 
 export async function saveDB(data) {
@@ -61,7 +81,9 @@ export async function saveDB(data) {
     activeTeams: (data.activeTeams && typeof data.activeTeams === 'object') ? data.activeTeams : {},
     questions: Array.isArray(data.questions) ? data.questions : DEFAULT_QUESTIONS,
     quizStatus: data.quizStatus || 'active',
-    kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : []
+    kickedTeams: Array.isArray(data.kickedTeams) ? data.kickedTeams : [],
+    adminTokens: Array.isArray(data.adminTokens) ? data.adminTokens : [],
+    teamAnswers: (data.teamAnswers && typeof data.teamAnswers === 'object') ? data.teamAnswers : {}
   };
 
   // 1. Save to Global Cloud DB across Vercel
@@ -74,10 +96,10 @@ export async function saveDB(data) {
       },
       body: JSON.stringify(payload)
     });
-  } catch (e) {}
+  } catch (e) { console.error('[DB] Cloud save error:', e.message); }
 
   // 2. Save to Local File
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(payload, null, 2));
-  } catch (e) {}
+  } catch (e) { console.error('[DB] Local save error:', e.message); }
 }
