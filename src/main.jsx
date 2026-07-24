@@ -75,12 +75,14 @@ function App() {
           if (typeof data.leaderboardRevealed === 'boolean') {
             setLeaderboardRevealed(data.leaderboardRevealed);
             
-            if (data.leaderboardRevealed) {
+            // Auto open celebration pop-up modal ONLY at the end of the quiz
+            const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
+            if (data.leaderboardRevealed && isAtEnd) {
               if (!hasAutoOpenedCelebration) {
                 setShowCelebrationModal(true);
                 setHasAutoOpenedCelebration(true);
               }
-            } else {
+            } else if (!data.leaderboardRevealed) {
               setHasAutoOpenedCelebration(false);
             }
           }
@@ -99,7 +101,16 @@ function App() {
       clearInterval(intervalId);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [hasAutoOpenedCelebration]);
+  }, [view, isCompleted, hasAutoOpenedCelebration]);
+
+  // Auto trigger modal when player finishes game if host already revealed leaderboard
+  useEffect(() => {
+    const isAtEnd = view === 'result' || (view === 'home' && isCompleted);
+    if (leaderboardRevealed && isAtEnd && !hasAutoOpenedCelebration) {
+      setShowCelebrationModal(true);
+      setHasAutoOpenedCelebration(true);
+    }
+  }, [view, isCompleted, leaderboardRevealed, hasAutoOpenedCelebration]);
 
   const begin = (name) => {
     const selectedTeam = name || teamName || 'Anonymous Team';
@@ -265,8 +276,8 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Floating Leaderboard Button when revealed by admin */}
-      {leaderboardRevealed && view !== 'admin' && (
+      {/* Floating Leaderboard Button — ONLY at the end when host has revealed */}
+      {leaderboardRevealed && (view === 'result' || (view === 'home' && isCompleted)) && (
         <motion.button
           className="floating-leaderboard-trigger glass"
           initial={{ scale: 0, opacity: 0 }}

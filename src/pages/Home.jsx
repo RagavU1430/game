@@ -48,11 +48,21 @@ export default function Home({ onStart, isCompleted = false, leaderboardRevealed
                 Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
               </p>
               
-              {leaderboardRevealed && (
+              {leaderboardRevealed ? (
                 <div style={{ marginTop: '1.2rem' }}>
                   <Button onClick={onOpenLeaderboard} className="reveal-banner-btn">
                     <FaTrophy /> 🎉 View Final Leaderboard
                   </Button>
+                </div>
+              ) : (
+                <div className="waiting-host-reveal-banner glass" style={{ marginTop: '1.2rem', padding: '0.9rem 1.2rem', borderRadius: '16px', background: 'rgba(254, 243, 199, 0.4)', border: '1px solid rgba(245, 158, 11, 0.3)', textAlign: 'center' }}>
+                  <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: 600, color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span className="pulse-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                    ⏳ Waiting for Host to Reveal Final Leaderboard…
+                  </p>
+                  <small style={{ fontSize: '0.8rem', color: '#78350f', display: 'block', marginTop: '0.2rem' }}>
+                    The event host will reveal the winner podium shortly! Keep this page open.
+                  </small>
                 </div>
               )}
 
@@ -71,12 +81,6 @@ export default function Home({ onStart, isCompleted = false, leaderboardRevealed
                 <Button onClick={() => setRules(true)}>
                   Start the game
                 </Button>
-
-                {leaderboardRevealed && (
-                  <Button onClick={onOpenLeaderboard} className="secondary reveal-home-btn">
-                    <FaTrophy /> 🎉 View Final Leaderboard
-                  </Button>
-                )}
               </div>
               <span className="gentle-note" style={{ marginTop: '0.8rem', display: 'block' }}>
                 🏆 Track your team's score & time on the leaderboard!
