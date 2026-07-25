@@ -386,19 +386,35 @@ export default function Admin({ onHome, onStartGame }) {
     });
   };
 
+  const handleToggleLeaderboardReveal = async (newRevealed) => {
+    setLeaderboardRevealed(newRevealed);
+    localStorage.setItem('quiz_leaderboard_revealed', String(newRevealed));
+    window.dispatchEvent(new Event('storage'));
+    await adminFetch('/api/admin/status', {
+      method: 'POST',
+      body: JSON.stringify({ revealed: newRevealed })
+    });
+  };
+
   // Sort and filter leaderboard
   const processedLeaderboard = [...leaderboard]
-    .filter(item => item.teamName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(item => (item?.teamName || '').toLowerCase().includes((searchTerm || '').toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === 'name') return a.teamName.localeCompare(b.teamName);
-      if (sortBy === 'time') return a.time - b.time;
-      if (b.score !== a.score) return b.score - a.score;
-      return a.time - b.time;
+      const nameA = a?.teamName || '';
+      const nameB = b?.teamName || '';
+      const scoreA = Number(a?.score) || 0;
+      const scoreB = Number(b?.score) || 0;
+      const timeA = Number(a?.time) || 0;
+      const timeB = Number(b?.time) || 0;
+      if (sortBy === 'name') return nameA.localeCompare(nameB);
+      if (sortBy === 'time') return timeA - timeB;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return timeA - timeB;
     });
 
   const totalTeams = leaderboard.length;
-  const bestScore = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.score)) : 0;
-  const fastestTime = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.time)) : 0;
+  const bestScore = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => Number(l?.score) || 0)) : 0;
+  const fastestTime = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => Number(l?.time) || 0)) : 0;
 
   // Login screen (fix #5 — no password hint in placeholder or error message)
   if (!isAuthenticated) {
