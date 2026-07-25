@@ -27,6 +27,15 @@ export default function Game({ onHome, onComplete, teamName }) {
     return localStorage.getItem('quiz_status') || 'active';
   });
 
+  const cleanupAndGoHome = useCallback(() => {
+    localStorage.removeItem('quiz_game_index');
+    localStorage.removeItem('quiz_game_score');
+    localStorage.removeItem('quiz_game_start_time');
+    sessionStorage.removeItem('quiz_current_team');
+    sessionStorage.removeItem('quiz_current_view');
+    onHome();
+  }, [onHome]);
+
   // Load latest questions & status from server
   useEffect(() => {
     const fetchLatestServerData = async () => {
@@ -54,8 +63,11 @@ export default function Game({ onHome, onComplete, teamName }) {
 
       // Check if session was kicked by admin
       if (teamName) {
-        const kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
-        if (kickedList.includes(teamName)) {
+        let kickedList = [];
+        try {
+          kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+        } catch (e) {}
+        if (Array.isArray(kickedList) && kickedList.includes(teamName)) {
           cleanupAndGoHome();
         }
       }
@@ -74,15 +86,6 @@ export default function Game({ onHome, onComplete, teamName }) {
       clearInterval(interval);
     };
   }, [teamName, cleanupAndGoHome]);
-
-  const cleanupAndGoHome = useCallback(() => {
-    localStorage.removeItem('quiz_game_index');
-    localStorage.removeItem('quiz_game_score');
-    localStorage.removeItem('quiz_game_start_time');
-    sessionStorage.removeItem('quiz_current_team');
-    sessionStorage.removeItem('quiz_current_view');
-    onHome();
-  }, [onHome]);
 
   // Restore current question index on refresh
   const [index, setIndexInternal] = useState(() => {
@@ -150,8 +153,11 @@ export default function Game({ onHome, onComplete, teamName }) {
     if (!teamName) return;
 
     // Check if team is already marked as kicked locally
-    const kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
-    if (kickedList.includes(teamName)) {
+    let kickedList = [];
+    try {
+      kickedList = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+    } catch (e) {}
+    if (Array.isArray(kickedList) && kickedList.includes(teamName)) {
       cleanupAndGoHome();
       return;
     }
@@ -165,8 +171,11 @@ export default function Game({ onHome, onComplete, teamName }) {
       .then(data => {
         if (data && data.kicked) {
           // Kicked by Admin on central server!
-          const currentKicked = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
-          if (!currentKicked.includes(teamName)) {
+          let currentKicked = [];
+          try {
+            currentKicked = JSON.parse(localStorage.getItem('quiz_kicked_teams') || '[]');
+          } catch (e) {}
+          if (Array.isArray(currentKicked) && !currentKicked.includes(teamName)) {
             currentKicked.push(teamName);
             localStorage.setItem('quiz_kicked_teams', JSON.stringify(currentKicked));
           }
