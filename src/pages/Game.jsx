@@ -198,8 +198,8 @@ export default function Game({ onHome, onComplete, teamName }) {
     }
   };
 
-  const safeIndex = Math.min(index, questionsList.length - 1);
-  const current = questionsList[safeIndex] || questionsList[0] || defaultQuestions[0];
+  const safeIndex = Math.max(0, Math.min(index, (questionsList?.length || 1) - 1));
+  const current = questionsList?.[safeIndex] || questionsList?.[0] || defaultQuestions[0];
 
   const advanceNext = (currentScore = score) => {
     if (safeIndex >= questionsList.length - 1) {

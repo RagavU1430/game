@@ -123,14 +123,18 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
 
   if (!open) return null;
 
-  // Process & sort leaderboard
+  // Process & sort leaderboard safely
   const sorted = [...leaderboard].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.time - b.time;
+    const scoreA = Number(a?.score) || 0;
+    const scoreB = Number(b?.score) || 0;
+    const timeA = Number(a?.time) || 0;
+    const timeB = Number(b?.time) || 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return timeA - timeB;
   });
 
   const filtered = sorted.filter((t) =>
-    (t.teamName || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (t?.teamName || '').toLowerCase().includes((searchTerm || '').toLowerCase())
   );
 
   const top1 = sorted[0];
@@ -187,9 +191,9 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
                   <div className="podium-rank-badge silver">
                     <FaMedal /> 2nd Place
                   </div>
-                  <h3 className="podium-team-name">{top2.teamName}</h3>
+                  <h3 className="podium-team-name">{top2.teamName || 'Team'}</h3>
                   <div className="podium-score">
-                    Score: <strong>{top2.score} / {totalQuestions}</strong>
+                    Score: <strong>{top2.score || 0} / {totalQuestions}</strong>
                   </div>
                   <div className="podium-time">
                     <FaClock /> {formatTime(top2.time)}
@@ -211,9 +215,9 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
                   <div className="podium-rank-badge gold">
                     <FaTrophy /> 🥇 CHAMPION
                   </div>
-                  <h2 className="podium-team-name gold-text">{top1.teamName}</h2>
+                  <h2 className="podium-team-name gold-text">{top1.teamName || 'Team'}</h2>
                   <div className="podium-score gold-score">
-                    Score: <strong>{top1.score} / {totalQuestions}</strong>
+                    Score: <strong>{top1.score || 0} / {totalQuestions}</strong>
                   </div>
                   <div className="podium-time">
                     <FaClock /> {formatTime(top1.time)}
@@ -232,9 +236,9 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
                   <div className="podium-rank-badge bronze">
                     <FaMedal /> 3rd Place
                   </div>
-                  <h3 className="podium-team-name">{top3.teamName}</h3>
+                  <h3 className="podium-team-name">{top3.teamName || 'Team'}</h3>
                   <div className="podium-score">
-                    Score: <strong>{top3.score} / {totalQuestions}</strong>
+                    Score: <strong>{top3.score || 0} / {totalQuestions}</strong>
                   </div>
                   <div className="podium-time">
                     <FaClock /> {formatTime(top3.time)}
@@ -280,12 +284,13 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
                   </thead>
                   <tbody>
                     {filtered.map((t, idx) => {
-                      const rankIndex = sorted.findIndex((item) => item.teamName === t.teamName) + 1;
-                      const isMyTeam = myTeamName && t.teamName.toLowerCase() === myTeamName.toLowerCase();
+                      const tName = t?.teamName || '';
+                      const rankIndex = sorted.findIndex((item) => (item?.teamName || '') === tName) + 1;
+                      const isMyTeam = Boolean(myTeamName && tName && tName.toLowerCase() === myTeamName.toLowerCase());
 
                       return (
                         <tr
-                          key={t.id || t.teamName + idx}
+                          key={t.id || tName + idx}
                           className={`${isMyTeam ? 'my-team-row' : ''} ${rankIndex <= 3 ? 'top-three-row' : ''}`}
                         >
                           <td className="rank-col">
@@ -295,11 +300,11 @@ export default function CelebrationLeaderboardModal({ open, onClose, myTeamName 
                              `#${rankIndex}`}
                           </td>
                           <td className="team-col">
-                            <strong>{t.teamName}</strong>
+                            <strong>{tName || 'Anonymous Team'}</strong>
                             {isMyTeam && <span className="your-team-pill">YOUR TEAM</span>}
                           </td>
                           <td className="score-col">
-                            <span className="score-badge-modal">{t.score} / {totalQuestions}</span>
+                            <span className="score-badge-modal">{t.score || 0} / {totalQuestions}</span>
                           </td>
                           <td className="time-col">
                             <FaClock className="clock-icon-mini" /> {formatTime(t.time)}

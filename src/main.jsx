@@ -260,4 +260,51 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[App] Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', background: '#1b3831', color: '#fff', padding: '2rem', textAlign: 'center',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#10b981' }}>Spot the Differences Challenge</h2>
+          <p style={{ color: '#a7f3d0', marginBottom: '1.5rem' }}>An error occurred. Click below to return to the home screen.</p>
+          <button
+            onClick={() => {
+              sessionStorage.clear();
+              window.location.href = '/';
+            }}
+            style={{
+              padding: '0.8rem 1.8rem', background: '#10b981', color: '#064e3b',
+              border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem'
+            }}
+          >
+            Reload Challenge Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
