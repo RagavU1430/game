@@ -183,32 +183,43 @@ function liveQuizApiPlugin() {
               // Initialize tracking if needed
               if (!db.teamAnswers) db.teamAnswers = {};
               if (!db.teamAnswers[teamName]) {
-                db.teamAnswers[teamName] = { answeredQuestions: [], serverScore: 0 };
+                db.teamAnswers[teamName] = { answeredQuestions: [], serverScore: 0, questionAttempts: {} };
               }
 
               const teamData = db.teamAnswers[teamName];
+              if (!teamData.questionAttempts) teamData.questionAttempts = {};
+              if (!Array.isArray(teamData.answeredQuestions)) teamData.answeredQuestions = [];
 
-              // Prevent re-answering same question
-              if (teamData.answeredQuestions.includes(questionId)) {
-                res.end(JSON.stringify({ success: false, error: 'Already answered', correct: false }));
+              // Prevent re-answering completed question
+              if (teamData.answeredQuestions.some(qId => String(qId) === String(questionId))) {
+                res.end(JSON.stringify({ success: true, error: 'Already answered', correct: false, serverScore: teamData.serverScore }));
                 return;
               }
 
               // Find the question and validate
-              const question = db.questions.find(q => q.id === questionId);
+              const question = db.questions.find(q => String(q.id) === String(questionId));
               if (!question) {
                 res.end(JSON.stringify({ success: false, error: 'Invalid question' }));
                 return;
               }
 
-              const isCorrect = Number(answer) === question.answer;
-              teamData.answeredQuestions.push(questionId);
+              const isCorrect = Number(answer) === Number(question.answer);
+              const attemptsSoFar = (Number(teamData.questionAttempts[questionId]) || 0) + 1;
+              teamData.questionAttempts[questionId] = attemptsSoFar;
+
               if (isCorrect) {
-                teamData.serverScore += 1;
+                if (!teamData.answeredQuestions.some(qId => String(qId) === String(question.id))) {
+                  teamData.answeredQuestions.push(question.id);
+                  teamData.serverScore += 1;
+                }
+              } else if (attemptsSoFar >= 2) {
+                if (!teamData.answeredQuestions.some(qId => String(qId) === String(question.id))) {
+                  teamData.answeredQuestions.push(question.id);
+                }
               }
 
               // Update active team score
-              if (db.activeTeams[teamName]) {
+              if (db.activeTeams && db.activeTeams[teamName]) {
                 db.activeTeams[teamName].score = teamData.serverScore;
               }
 

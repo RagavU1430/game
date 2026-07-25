@@ -45,7 +45,7 @@ export default function Game({ onHome, onComplete, teamName }) {
         if (res.ok) {
           const body = await res.json();
           if (Array.isArray(body.questions) && body.questions.length > 0) {
-            setQuestionsList(body.questions);
+            setQuestionsList(prev => (prev.length === body.questions.length && prev[0]?.id === body.questions[0]?.id) ? prev : body.questions);
           }
         }
       } catch (e) { console.error('[Game] Questions fetch error:', e.message); }
@@ -55,8 +55,13 @@ export default function Game({ onHome, onComplete, teamName }) {
         if (resStatus.ok) {
           const bodyStatus = await resStatus.json();
           if (bodyStatus.status) {
-            setQuizStatus(bodyStatus.status);
-            localStorage.setItem('quiz_status', bodyStatus.status);
+            setQuizStatus(prev => {
+              if (prev !== bodyStatus.status) {
+                localStorage.setItem('quiz_status', bodyStatus.status);
+                return bodyStatus.status;
+              }
+              return prev;
+            });
           }
         }
       } catch (e) { console.error('[Game] Status fetch error:', e.message); }

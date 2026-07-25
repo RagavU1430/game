@@ -32,14 +32,16 @@ export default async function handler(req, res) {
   // Initialize tracking if needed
   if (!db.teamAnswers) db.teamAnswers = {};
   if (!db.teamAnswers[teamName]) {
-    db.teamAnswers[teamName] = { answeredQuestions: [], serverScore: 0 };
+    db.teamAnswers[teamName] = { answeredQuestions: [], serverScore: 0, questionAttempts: {} };
   }
 
   const teamData = db.teamAnswers[teamName];
+  if (!teamData.questionAttempts) teamData.questionAttempts = {};
+  if (!Array.isArray(teamData.answeredQuestions)) teamData.answeredQuestions = [];
 
-  // Prevent re-answering same question (compare as strings/numbers safely)
-  const hasAlreadyAnswered = teamData.answeredQuestions.some(qId => String(qId) === String(questionId));
-  if (hasAlreadyAnswered) {
+  // Prevent re-answering completed question (compare as strings/numbers safely)
+  const isCompleted = teamData.answeredQuestions.some(qId => String(qId) === String(questionId));
+  if (isCompleted) {
     return res.status(200).json({
       success: true,
       correct: false,
@@ -55,9 +57,20 @@ export default async function handler(req, res) {
   }
 
   const isCorrect = Number(answer) === Number(question.answer);
-  teamData.answeredQuestions.push(question.id);
+  const attemptsSoFar = (Number(teamData.questionAttempts[questionId]) || 0) + 1;
+  teamData.questionAttempts[questionId] = attemptsSoFar;
+
   if (isCorrect) {
-    teamData.serverScore += 1;
+    // If correct (whether on 1st or 2nd attempt), mark question completed & award score
+    if (!teamData.answeredQuestions.some(qId => String(qId) === String(question.id))) {
+      teamData.answeredQuestions.push(question.id);
+      teamData.serverScore += 1;
+    }
+  } else if (attemptsSoFar >= 2) {
+    // If incorrect and used up both attempts, mark question completed without score
+    if (!teamData.answeredQuestions.some(qId => String(qId) === String(question.id))) {
+      teamData.answeredQuestions.push(question.id);
+    }
   }
 
   // Update active team score

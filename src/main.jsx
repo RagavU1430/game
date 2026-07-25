@@ -57,7 +57,7 @@ function App() {
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data.questions)) {
-            setTotalQuestions(data.questions.length);
+            setTotalQuestions(prev => prev === data.questions.length ? prev : data.questions.length);
           }
         })
         .catch((e) => { console.error('[App] Questions count fetch error:', e.message); });
@@ -66,7 +66,7 @@ function App() {
         .then(res => res.json())
         .then(data => {
           if (typeof data.leaderboardRevealed === 'boolean') {
-            setLeaderboardRevealed(data.leaderboardRevealed);
+            setLeaderboardRevealed(prev => prev === data.leaderboardRevealed ? prev : data.leaderboardRevealed);
           }
         })
         .catch((e) => { console.error('[App] Status fetch error:', e.message); });
