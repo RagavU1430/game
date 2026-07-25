@@ -11,12 +11,12 @@ export const DEFAULT_QUESTIONS = [
   { id: 2, image: '/images/q2.jpeg', answer: 3, title: 'Horse Racing', hint: "Check the jockey's gear and the horse's features" },
   { id: 3, image: '/images/q3.jpeg', answer: 3, title: 'Vegetables', hint: 'Compare the mushrooms, potatoes, and carrots' },
   { id: 4, image: '/images/q4.jpeg', answer: 5, title: 'Art Class', hint: 'Look at the crayons, paint palette, and shapes' },
-  { id: 5, image: '/images/q5.jpeg', answer: 5, title: 'Zoo Visit', hint: 'Check the animals, children, and fence area' },
+  { id: 5, image: '/images/q5.jpeg', answer: 8, title: 'Zoo Visit', hint: 'Check the animals, children, and fence area' },
   { id: 6, image: '/images/q6.jpeg', answer: 6, title: 'Construction', hint: 'Look at the workers, tools, and steel beams' },
-  { id: 7, image: '/images/q7.jpeg', answer: 5, title: 'Carnival Fun', hint: 'Check the ferris wheel, tent, and ticket booth' },
-  { id: 8, image: '/images/q8.jpeg', answer: 5, title: 'School Bus', hint: 'Look at the birds, bus number, and children' },
-  { id: 9, image: '/images/q9.jpeg', answer: 5, title: 'Baseball', hint: "Check the trees, ball, and boy's clothes" },
-  { id: 10, image: '/images/q10.jpeg', answer: 3, title: 'Forest Picnic', hint: 'Look at the fruit, cup, and sky' }
+  { id: 7, image: '/images/q7.jpeg', answer: 4, title: 'Carnival Fun', hint: 'Check the ferris wheel, tent, and ticket booth' },
+  { id: 8, image: '/images/q8.jpeg', answer: 7, title: 'School Bus', hint: 'Look at the birds, bus number, and children' },
+  { id: 9, image: '/images/q9.jpeg', answer: 3, title: 'Baseball', hint: "Check the trees, ball, and boy's clothes" },
+  { id: 10, image: '/images/q10.jpeg', answer: 15, title: 'Forest Picnic', hint: 'Look at the fruit, cup, and sky' }
 ];
 const emptyDB = () => ({ leaderboard: [], activeTeams: {}, questions: DEFAULT_QUESTIONS, quizStatus: 'active', leaderboardRevealed: false, kickedTeams: [], teamAnswers: {} });
 function normalizeDB(data) { return { leaderboard: Array.isArray(data?.leaderboard) ? data.leaderboard : [], activeTeams: data?.activeTeams && typeof data.activeTeams === 'object' ? data.activeTeams : {}, questions: Array.isArray(data?.questions) && data.questions.length ? data.questions : DEFAULT_QUESTIONS, quizStatus: data?.quizStatus === 'paused' ? 'paused' : 'active', leaderboardRevealed: Boolean(data?.leaderboardRevealed), kickedTeams: Array.isArray(data?.kickedTeams) ? data.kickedTeams : [], teamAnswers: data?.teamAnswers && typeof data.teamAnswers === 'object' ? data.teamAnswers : {} }; }
