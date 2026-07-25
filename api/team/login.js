@@ -16,6 +16,7 @@ export default async function handler(req, res) {
   const { teamName } = body;
 
   if (teamName) {
+    const db = await loadDB();
     // Kicked teams CANNOT re-login (fix #16)
     const isKicked = Array.isArray(db.kickedTeams) && db.kickedTeams.some(entry => {
       if (typeof entry === 'object') return entry.teamName === teamName;
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, kicked: true, message: 'This team has been removed by the admin.' });
     }
 
+    if (!db.activeTeams) db.activeTeams = {};
     db.activeTeams[teamName] = {
       id: 'team_' + Date.now(),
       teamName,
@@ -38,7 +40,8 @@ export default async function handler(req, res) {
     if (!db.teamAnswers) db.teamAnswers = {};
     db.teamAnswers[teamName] = { answeredQuestions: [], serverScore: 0 };
     await saveDB(db);
+    return res.status(200).json({ success: true, activeTeam: db.activeTeams[teamName] || null });
   }
 
-  res.status(200).json({ success: true, activeTeam: teamName ? db.activeTeams[teamName] : null });
+  res.status(200).json({ success: true, activeTeam: null });
 }

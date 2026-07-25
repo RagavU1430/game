@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaLeaf, FaHeart } from 'react-icons/fa6';
+import { FaLeaf, FaHeart, FaTrophy } from 'react-icons/fa6';
 import { useState } from 'react';
 import Button from '../components/Button';
 import FloatingBackground from '../components/FloatingBackground';
@@ -7,7 +7,7 @@ import RulesModal from '../components/RulesModal';
 import TeamEntry from '../components/TeamEntry';
 import InteractiveLogo from '../components/InteractiveLogo';
 
-export default function Home({ onStart, isCompleted = false }) {
+export default function Home({ onStart, isCompleted = false, leaderboardRevealed = false, onViewLeaderboard }) {
   const [rules, setRules] = useState(false);
   const [teamModal, setTeamModal] = useState(false);
 
@@ -48,6 +48,14 @@ export default function Home({ onStart, isCompleted = false }) {
                 Your team response has been submitted to the live event leaderboard. We hope you enjoyed the Spot the Differences Challenge!
               </p>
 
+              {leaderboardRevealed && (
+                <div style={{ marginTop: '1.2rem' }}>
+                  <Button onClick={onViewLeaderboard} className="reveal-active-btn">
+                    <FaTrophy /> 🎉 View Official Leaderboard
+                  </Button>
+                </div>
+              )}
+
               <div className="thankyou-badge-row" style={{ marginTop: '1.5rem' }}>
                 <span className="club-tag">AI Frontier Club</span>
                 <span className="dept-tag">Department of AI & DS</span>
@@ -59,10 +67,15 @@ export default function Home({ onStart, isCompleted = false }) {
               <p className="hero-subtitle">
                 Observe carefully, count the hidden differences, and test your team's observation skills.
               </p>
-              <div className="hero-actions">
+              <div className="hero-actions" style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
                 <Button onClick={() => setRules(true)}>
                   Start the game
                 </Button>
+                {leaderboardRevealed && (
+                  <Button onClick={onViewLeaderboard} className="reveal-active-btn">
+                    <FaTrophy /> 🎉 View Live Leaderboard
+                  </Button>
+                )}
               </div>
               <span className="gentle-note" style={{ marginTop: '0.8rem', display: 'block' }}>
                 🏆 Track your team's score & time on the leaderboard!

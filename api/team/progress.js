@@ -16,24 +16,38 @@ export default async function handler(req, res) {
   const { teamName, score, currentQuestion } = body;
 
   if (teamName) {
+    const db = await loadDB();
     const isKicked = Array.isArray(db.kickedTeams) && db.kickedTeams.some(entry => {
       if (typeof entry === 'object') return entry.teamName === teamName;
       return entry === teamName;
     });
     if (isKicked) {
-      delete db.activeTeams[teamName];
-      await saveDB(db);
+      if (db.activeTeams && db.activeTeams[teamName]) {
+        delete db.activeTeams[teamName];
+        await saveDB(db);
+      }
       return res.status(200).json({ success: false, kicked: true });
     }
 
-    if (db.activeTeams[teamName]) {
+    if (!db.activeTeams) db.activeTeams = {};
+    if (!db.activeTeams[teamName]) {
+      db.activeTeams[teamName] = {
+        id: 'team_' + Date.now(),
+        teamName,
+        startedAt: Date.now(),
+        lastActive: Date.now(),
+        score: score || 0,
+        currentQuestion: currentQuestion || 1,
+        status: 'Playing'
+      };
+    } else {
       // Use server-tracked score
       const serverData = db.teamAnswers && db.teamAnswers[teamName];
       db.activeTeams[teamName].score = serverData ? serverData.serverScore : (score || 0);
       db.activeTeams[teamName].currentQuestion = currentQuestion;
       db.activeTeams[teamName].lastActive = Date.now();
-      await saveDB(db);
     }
+    await saveDB(db);
   }
 
   res.status(200).json({ success: true });

@@ -5,6 +5,7 @@ import { FaLeaf } from 'react-icons/fa6';
 import Home from './pages/Home';
 import Game from './pages/Game';
 import TeamEntry from './components/TeamEntry';
+import CelebrationLeaderboardModal from './components/CelebrationLeaderboardModal';
 import './styles.css';
 
 const Result = lazy(() => import('./pages/Result'));
@@ -38,6 +39,8 @@ function App() {
   const [totalQuestions, setTotalQuestions] = useState(10);
 
   const [isCompleted, setIsCompleted] = useState(false);
+  const [leaderboardRevealed, setLeaderboardRevealed] = useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
 
   const [run, setRun] = useState(0);
   const [showTeamModalFromAdmin, setShowTeamModalFromAdmin] = useState(false);
@@ -47,16 +50,31 @@ function App() {
     sessionStorage.setItem('quiz_current_view', newView);
   };
 
-  // Fetch question count from server for dynamic total
+  // Fetch status and question count from server
   useEffect(() => {
-    fetch('/api/questions')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data.questions)) {
-          setTotalQuestions(data.questions.length);
-        }
-      })
-      .catch((e) => { console.error('[App] Questions count fetch error:', e.message); });
+    const checkServerStatus = () => {
+      fetch('/api/questions')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.questions)) {
+            setTotalQuestions(data.questions.length);
+          }
+        })
+        .catch((e) => { console.error('[App] Questions count fetch error:', e.message); });
+
+      fetch('/api/status')
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data.leaderboardRevealed === 'boolean') {
+            setLeaderboardRevealed(data.leaderboardRevealed);
+          }
+        })
+        .catch((e) => { console.error('[App] Status fetch error:', e.message); });
+    };
+
+    checkServerStatus();
+    const interval = setInterval(checkServerStatus, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const begin = (name) => {
@@ -184,6 +202,8 @@ function App() {
             <Home
               onStart={(name) => begin(name)}
               isCompleted={isCompleted}
+              leaderboardRevealed={leaderboardRevealed}
+              onViewLeaderboard={() => setShowCelebrationModal(true)}
             />
           </motion.div>
         )}
@@ -228,6 +248,13 @@ function App() {
           begin(name);
         }}
         onClose={() => setShowTeamModalFromAdmin(false)}
+      />
+
+      <CelebrationLeaderboardModal
+        open={showCelebrationModal}
+        onClose={() => setShowCelebrationModal(false)}
+        myTeamName={teamName}
+        totalQuestions={totalQuestions}
       />
     </main>
   );

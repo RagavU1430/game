@@ -51,14 +51,6 @@ export default function Game({ onHome, onComplete, teamName }) {
           }
         }
       } catch (e) { console.error('[Game] Status fetch error:', e.message); }
-    };
-
-    fetchLatestServerData();
-
-    // Fix #19: Reduced polling from 2s to 5s
-    const handleStorageChange = () => {
-      const savedStatus = localStorage.getItem('quiz_status');
-      if (savedStatus) setQuizStatus(savedStatus);
 
       // Check if session was kicked by admin
       if (teamName) {
@@ -69,13 +61,19 @@ export default function Game({ onHome, onComplete, teamName }) {
       }
     };
 
+    fetchLatestServerData();
+
+    const handleStorageChange = () => {
+      fetchLatestServerData();
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 5000);
+    const interval = setInterval(fetchLatestServerData, 3000);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [teamName]);
+  }, [teamName, cleanupAndGoHome]);
 
   const cleanupAndGoHome = useCallback(() => {
     localStorage.removeItem('quiz_game_index');

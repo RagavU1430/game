@@ -135,20 +135,33 @@ function liveQuizApiPlugin() {
               const { teamName, score, currentQuestion } = body;
               if (teamName) {
                 if (isTeamKicked(teamName)) {
-                  delete db.activeTeams[teamName];
-                  saveDB(db);
+                  if (db.activeTeams && db.activeTeams[teamName]) {
+                    delete db.activeTeams[teamName];
+                    saveDB(db);
+                  }
                   res.end(JSON.stringify({ success: false, kicked: true }));
                   return;
                 }
 
-                if (db.activeTeams[teamName]) {
+                if (!db.activeTeams) db.activeTeams = {};
+                if (!db.activeTeams[teamName]) {
+                  db.activeTeams[teamName] = {
+                    id: 'team_' + Date.now(),
+                    teamName,
+                    startedAt: Date.now(),
+                    lastActive: Date.now(),
+                    score: score || 0,
+                    currentQuestion: currentQuestion || 1,
+                    status: 'Playing'
+                  };
+                } else {
                   // Use server-tracked score, not client-provided
                   const serverData = db.teamAnswers && db.teamAnswers[teamName];
                   db.activeTeams[teamName].score = serverData ? serverData.serverScore : (score || 0);
                   db.activeTeams[teamName].currentQuestion = currentQuestion;
                   db.activeTeams[teamName].lastActive = Date.now();
-                  saveDB(db);
                 }
+                saveDB(db);
               }
               res.end(JSON.stringify({ success: true }));
               return;
