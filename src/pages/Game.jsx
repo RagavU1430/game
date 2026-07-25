@@ -244,7 +244,7 @@ export default function Game({ onHome, onComplete, teamName }) {
       if (isCorrect) {
         setCorrect(true);
         setWrong(false);
-        const newScore = serverScore !== undefined ? serverScore : score + 1;
+        const newScore = Math.max(score + 1, Number(serverScore) || 0);
         setScore(newScore);
         setTimeout(() => {
           advanceNext(newScore);
@@ -258,7 +258,7 @@ export default function Game({ onHome, onComplete, teamName }) {
 
         if (newAttempts >= 2) {
           setTimeout(() => {
-            advanceNext(serverScore !== undefined ? serverScore : score);
+            advanceNext(score);
           }, 1300);
         } else {
           setIsSubmitting(false);
@@ -294,12 +294,14 @@ export default function Game({ onHome, onComplete, teamName }) {
         }
       }
       
-      // Fallback local validation if server endpoint did not return correct boolean
-      const isLocalCorrect = Number(answer) === Number(current.answer);
+      // Fallback local validation if server endpoint unavailable
+      const currentAnswer = current.answer ?? defaultQuestions.find(q => q.id === current.id)?.answer;
+      const isLocalCorrect = currentAnswer !== undefined && Number(answer) === Number(currentAnswer);
       handleAnswerResult(isLocalCorrect, isLocalCorrect ? score + 1 : score);
     } catch (err) {
       console.error('[Game] Answer submit error:', err.message);
-      const isLocalCorrect = Number(answer) === Number(current.answer);
+      const currentAnswer = current.answer ?? defaultQuestions.find(q => q.id === current.id)?.answer;
+      const isLocalCorrect = currentAnswer !== undefined && Number(answer) === Number(currentAnswer);
       handleAnswerResult(isLocalCorrect, isLocalCorrect ? score + 1 : score);
     }
   };
